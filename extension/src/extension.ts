@@ -118,7 +118,7 @@ export function activate(context: vscode.ExtensionContext) {
     // Set up context tracking for authentication status
     updateAuthenticationContext();
     
-    // Watch for authentication changes
+    // Also update when auth state might change (on any config change)
     context.subscriptions.push(
       vscode.workspace.onDidChangeConfiguration((e) => {
         if (e.affectsConfiguration('cursorChatSync')) {
@@ -127,8 +127,68 @@ export function activate(context: vscode.ExtensionContext) {
       })
     );
 
+    // Update context immediately and periodically to ensure it's set
+    const contextUpdateInterval = setInterval(() => {
+      updateAuthenticationContext();
+    }, 5000); // Update every 5 seconds
+    context.subscriptions.push({
+      dispose: () => clearInterval(contextUpdateInterval)
+    });
+
     // Set up active conversation tracking
     setupActiveConversationTracking(context, syncManager);
+
+    // Add test command to verify context variables
+    const testContextCommand = vscode.commands.registerCommand('cursorChatSync.testContext', async () => {
+      const isAuth = AuthService.isAuthenticated();
+      try {
+        const contextAuth = await vscode.commands.executeCommand('getContext', 'cursorChatSync.isAuthenticated');
+        const activeConv = await vscode.commands.executeCommand('getContext', 'cursorChatSync.activeConversationId');
+        
+        vscode.window.showInformationMessage(
+          `Auth Status: ${isAuth}\n` +
+          `Context Auth: ${contextAuth}\n` +
+          `Active Conversation: ${activeConv || 'None'}`
+        );
+      } catch (error) {
+        vscode.window.showInformationMessage(`Auth Status: ${isAuth} (context check failed)`);
+      }
+    });
+    context.subscriptions.push(testContextCommand);
+
+    // Add quick actions status bar item for chat sync operations
+    // This provides an alternative to context menu since Cursor's chat UI is a custom webview
+    if (syncManager) {
+      const quickActionsStatusBar = vscode.window.createStatusBarItem(
+        vscode.StatusBarAlignment.Right,
+        99
+      );
+      quickActionsStatusBar.text = '$(sync) Chat Actions';
+      quickActionsStatusBar.tooltip = 'Chat Sync Quick Actions';
+      quickActionsStatusBar.command = 'cursorChatSync.showQuickActions';
+      quickActionsStatusBar.show();
+      context.subscriptions.push(quickActionsStatusBar);
+
+      // Register quick actions command
+      const quickActionsCommand = vscode.commands.registerCommand('cursorChatSync.showQuickActions', async () => {
+        const actions = [
+          { label: '$(sync) Sync This Chat', command: 'cursorChatSync.syncConversation' },
+          { label: '$(lock) Lock This Chat', command: 'cursorChatSync.lockConversation' },
+          { label: '$(unlock) Unlock This Chat', command: 'cursorChatSync.unlockConversation' },
+          { label: '$(eye-closed) Exclude from Sync', command: 'cursorChatSync.excludeConversation' },
+          { label: '$(eye) Include in Sync', command: 'cursorChatSync.includeConversation' },
+        ];
+
+        const selected = await vscode.window.showQuickPick(actions, {
+          placeHolder: 'Select a chat sync action',
+        });
+
+        if (selected) {
+          vscode.commands.executeCommand(selected.command);
+        }
+      });
+      context.subscriptions.push(quickActionsCommand);
+    }
 
     // Watch for configuration changes
     context.subscriptions.push(

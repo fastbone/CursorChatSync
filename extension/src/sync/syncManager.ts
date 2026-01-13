@@ -305,6 +305,25 @@ export class SyncManager {
 
       let localChatData = this.dbReader.readChatHistory();
 
+      // Check if there are any actual conversations
+      const conversations = extractConversations(localChatData);
+      if (conversations.size === 0) {
+        const warningMsg = 'No conversations found in chat data. This might mean:\n' +
+          '1. No chat history exists yet in Cursor\n' +
+          '2. Chat data is stored in a different location\n' +
+          '3. The database structure has changed';
+        logger.warn(warningMsg);
+        vscode.window.showWarningMessage(
+          'No conversations found in chat data. Syncing empty state.',
+          'View Logs'
+        ).then(selection => {
+          if (selection === 'View Logs') {
+            logger.showOutputChannel();
+          }
+        });
+        // Still allow sync to proceed - user might want to sync empty state
+      }
+
       // If a specific conversation ID is provided, filter to only that conversation
       if (conversationId) {
         const conversations = extractConversations(localChatData);

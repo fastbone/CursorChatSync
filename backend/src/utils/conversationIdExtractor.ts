@@ -27,6 +27,9 @@ export function extractConversations(chatData: any): Map<string, any> {
       conversations.set(id, item);
     });
   } else {
+    // Exclude metadata fields that are not conversations
+    const metadataKeys = new Set(['_raw', '_metadata', '_source', '_index']);
+    
     // Strategy 2: Look for common conversation keys
     const conversationKeys = [
       'conversations',
@@ -46,18 +49,31 @@ export function extractConversations(chatData: any): Map<string, any> {
       }
     }
 
-    // Strategy 3: If the entire object is a conversation
-    const directId = extractConversationId(chatData, 0);
-    if (directId && directId !== '0') {
-      conversations.set(directId, chatData);
+    // Strategy 3: If the entire object is a conversation (but not if it has metadata fields)
+    // Only treat as conversation if it doesn't have metadata keys and has conversation-like properties
+    const hasMetadataKeys = Object.keys(chatData).some(key => metadataKeys.has(key));
+    if (!hasMetadataKeys) {
+      const directId = extractConversationId(chatData, 0);
+      if (directId && directId !== '0') {
+        conversations.set(directId, chatData);
+      }
     }
 
-    // Strategy 4: Look for nested conversation structures
+    // Strategy 4: Look for nested conversation structures (excluding metadata keys)
     for (const [key, value] of Object.entries(chatData)) {
+      // Skip metadata keys
+      if (metadataKeys.has(key)) {
+        continue;
+      }
+      
       if (value && typeof value === 'object' && !Array.isArray(value)) {
-        const nestedId = extractConversationId(value, 0);
-        if (nestedId && nestedId !== '0') {
-          conversations.set(`${key}_${nestedId}`, value);
+        // Only treat as conversation if it has conversation-like properties
+        const hasConversationId = value.conversationId || value.composerId || value.chatId || value.id;
+        if (hasConversationId) {
+          const nestedId = extractConversationId(value, 0);
+          if (nestedId && nestedId !== '0') {
+            conversations.set(`${key}_${nestedId}`, value);
+          }
         }
       }
     }

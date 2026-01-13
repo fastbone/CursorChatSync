@@ -109,33 +109,68 @@
         "command": "cursorChatSync.includeConversation",
         "title": "Include in Sync",
         "icon": "$(eye)"
+      },
+      {
+        "command": "cursorChatSync.testContext",
+        "title": "Test Context Variables"
+      },
+      {
+        "command": "cursorChatSync.showQuickActions",
+        "title": "Show Chat Sync Quick Actions"
       }
     ],
     "menus": {
       "editor/context": [
         {
           "command": "cursorChatSync.syncConversation",
-          "when": "cursorChatSync.isAuthenticated && workspaceFolderCount > 0",
+          "when": "true",
           "group": "cursorChatSync@1"
         },
         {
           "command": "cursorChatSync.lockConversation",
-          "when": "cursorChatSync.isAuthenticated && workspaceFolderCount > 0",
+          "when": "true",
           "group": "cursorChatSync@2"
         },
         {
           "command": "cursorChatSync.unlockConversation",
-          "when": "cursorChatSync.isAuthenticated && workspaceFolderCount > 0",
+          "when": "true",
           "group": "cursorChatSync@2"
         },
         {
           "command": "cursorChatSync.excludeConversation",
-          "when": "cursorChatSync.isAuthenticated && workspaceFolderCount > 0",
+          "when": "true",
           "group": "cursorChatSync@3"
         },
         {
           "command": "cursorChatSync.includeConversation",
-          "when": "cursorChatSync.isAuthenticated && workspaceFolderCount > 0",
+          "when": "true",
+          "group": "cursorChatSync@3"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "cursorChatSync.syncConversation",
+          "when": "cursorChatSync.isAuthenticated",
+          "group": "cursorChatSync@1"
+        },
+        {
+          "command": "cursorChatSync.lockConversation",
+          "when": "cursorChatSync.isAuthenticated",
+          "group": "cursorChatSync@2"
+        },
+        {
+          "command": "cursorChatSync.unlockConversation",
+          "when": "cursorChatSync.isAuthenticated",
+          "group": "cursorChatSync@2"
+        },
+        {
+          "command": "cursorChatSync.excludeConversation",
+          "when": "cursorChatSync.isAuthenticated",
+          "group": "cursorChatSync@3"
+        },
+        {
+          "command": "cursorChatSync.includeConversation",
+          "when": "cursorChatSync.isAuthenticated",
           "group": "cursorChatSync@3"
         }
       ],
