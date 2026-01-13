@@ -116,15 +116,21 @@ cp backend/.env.example backend/.env
 # Edit backend/.env with your configuration
 ```
 
-3. Start all services:
+3. (Optional) Create environment file for custom configuration:
+```bash
+cp backend/.env.example backend/.env
+# Edit backend/.env with your configuration (optional - defaults work)
+```
+
+4. Start all services (PostgreSQL will be set up automatically):
 ```bash
 docker-compose up -d
 ```
 
-4. Run database migrations:
-```bash
-docker-compose exec backend npm run migrate
-```
+The backend will automatically:
+- Wait for PostgreSQL to be ready
+- Run database migrations
+- Start the server
 
 5. Access the services:
    - Backend API: http://localhost:3000
@@ -423,6 +429,15 @@ The extension looks for `state.vscdb` in the Cursor user data directory:
 - Windows: `%APPDATA%\Cursor\User\globalStorage\state.vscdb`
 
 Make sure Cursor is installed and has been used at least once.
+
+### better-sqlite3 Build Errors with Node.js 24
+
+If you encounter build errors when installing `better-sqlite3` with Node.js 24:
+
+1. **Update better-sqlite3**: The extension uses `better-sqlite3 ^12.4.1` which supports Node.js 24
+2. **Rebuild**: Run `npm rebuild better-sqlite3` in the extension directory
+3. **Note**: VS Code/Cursor uses its own bundled Node.js version, so runtime compatibility is typically not an issue even if development builds fail
+4. **Workaround**: Use Node.js 20 LTS for development if needed, or wait for better-sqlite3 updates
 
 ### Database Connection Issues
 

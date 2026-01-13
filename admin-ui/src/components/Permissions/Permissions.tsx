@@ -22,7 +22,7 @@ export default function Permissions() {
   const [filter, setFilter] = useState<'all' | 'pending'>('pending');
   const [pollingEnabled, setPollingEnabled] = useState(true);
   const previousPendingCount = useRef<number>(0);
-  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const pollingIntervalRef = useRef<number | null>(null);
 
   useEffect(() => {
     loadPermissions();
@@ -62,7 +62,7 @@ export default function Permissions() {
       
       // Check for new pending requests
       if (filter === 'pending' && !silent) {
-        const currentPendingCount = newPermissions.filter(p => p.status === 'pending').length;
+        const currentPendingCount = newPermissions.filter((p: Permission) => p.status === 'pending').length;
         if (currentPendingCount > previousPendingCount.current && previousPendingCount.current > 0) {
           const newCount = currentPendingCount - previousPendingCount.current;
           toast.info(`New permission request${newCount > 1 ? 's' : ''} received!`);

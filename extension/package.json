@@ -54,6 +54,26 @@
       {
         "command": "cursorChatSync.showLockStatus",
         "title": "Show Lock Status"
+      },
+      {
+        "command": "cursorChatSync.listBackups",
+        "title": "List Chat History Backups"
+      },
+      {
+        "command": "cursorChatSync.restoreBackup",
+        "title": "Restore Chat History from Backup"
+      },
+      {
+        "command": "cursorChatSync.createBackup",
+        "title": "Create Manual Backup"
+      },
+      {
+        "command": "cursorChatSync.deleteBackup",
+        "title": "Delete Backup"
+      },
+      {
+        "command": "cursorChatSync.showBackupInfo",
+        "title": "Show Backup Information"
       }
     ],
     "configuration": {
@@ -98,6 +118,16 @@
           "type": "boolean",
           "default": true,
           "description": "Show notifications when chats are locked by other users"
+        },
+        "cursorChatSync.maxBackups": {
+          "type": "number",
+          "default": 10,
+          "description": "Maximum number of backups to keep (default: 10)"
+        },
+        "cursorChatSync.backupBeforeSync": {
+          "type": "boolean",
+          "default": true,
+          "description": "Create backup before each sync operation (recommended: true)"
         }
       }
     }
@@ -108,16 +138,15 @@
     "watch": "tsc -watch -p ./"
   },
   "devDependencies": {
-    "@types/vscode": "^1.74.0",
-    "@types/node": "^20.10.5",
     "@types/better-sqlite3": "^7.6.11",
+    "@types/node": "^20.10.5",
+    "@types/vscode": "^1.74.0",
     "typescript": "^5.3.3"
   },
   "dependencies": {
-    "better-sqlite3": "^12.1.0",
     "axios": "^1.6.2"
   },
   "optionalDependencies": {
-    "better-sqlite3": "^12.1.0"
+    "better-sqlite3": "^12.6.0"
   }
 }

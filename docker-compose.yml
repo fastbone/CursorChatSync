@@ -40,7 +40,9 @@ services:
     volumes:
       - ./backend:/app
       - /app/node_modules
-    command: npm run dev
+    # Entrypoint will run migrations automatically before starting
+    entrypoint: ["/usr/local/bin/docker-entrypoint.sh"]
+    command: sh -c "npm install && npm run dev"
 
   admin-ui:
     build:

@@ -1,19 +1,57 @@
 import * as path from 'path';
+import * as fs from 'fs';
 import Database from 'better-sqlite3';
 import { DbReader } from './dbReader';
+import { BackupService } from './backupService';
 
 export class DbWriter {
-  private dbPath: string;
+  private globalDbPath: string;
+  private workspaceCursorPath: string | null = null;
   private reader: DbReader;
+  private backupService: BackupService;
 
-  constructor() {
-    this.reader = new DbReader();
-    this.dbPath = this.reader.getDbPath();
+  constructor(workspacePath?: string, maxBackups?: number) {
+    this.reader = new DbReader(workspacePath);
+    this.globalDbPath = this.reader.getDbPath();
+    this.workspaceCursorPath = this.reader.getWorkspaceCursorPath();
+    this.backupService = new BackupService(workspacePath, maxBackups);
   }
 
-  writeChatHistory(chatData: any): void {
+  /**
+   * Write chat history to the appropriate database location
+   * For workspace-specific chats, prefer writing to workspace .cursor directory
+   * For global chats, write to global storage
+   * 
+   * IMPORTANT: Creates a backup before writing to prevent data loss
+   */
+  async writeChatHistory(chatData: any, preferWorkspace: boolean = true, createBackup: boolean = true): Promise<void> {
+    // Create backup before any write operation
+    if (createBackup) {
+      try {
+        await this.backupService.createBackup();
+      } catch (error: any) {
+        console.error(`Failed to create backup before write: ${error.message}`);
+        // Continue with write even if backup fails, but log the error
+        // In production, you might want to throw here or show a warning
+      }
+    }
+    // Determine target database path
+    // If workspace .cursor directory exists and we prefer workspace, use it
+    // Otherwise, fall back to global storage
+    const targetPath = (preferWorkspace && this.workspaceCursorPath) 
+      ? this.workspaceCursorPath 
+      : this.globalDbPath;
+
     try {
-      const db = new Database(this.dbPath);
+      // Ensure directory exists for workspace .cursor path
+      if (preferWorkspace && this.workspaceCursorPath) {
+        const dir = path.dirname(this.workspaceCursorPath);
+        if (!fs.existsSync(dir)) {
+          fs.mkdirSync(dir, { recursive: true });
+        }
+      }
+
+      const db = new Database(targetPath);
       
       // Ensure the table exists
       db.exec(`
@@ -35,6 +73,13 @@ export class DbWriter {
     } catch (error: any) {
       throw new Error(`Failed to write chat history: ${error.message}`);
     }
+  }
+
+  /**
+   * Get backup service instance
+   */
+  getBackupService(): BackupService {
+    return this.backupService;
   }
 
   mergeChatHistory(remoteChatData: any, localChatData: any): any {
@@ -130,7 +175,8 @@ export class DbWriter {
   }
 
   private getItemId(item: any): string | null {
-    // Try common ID fields
+    // Try common ID fields (including Cursor's composerId)
+    if (item.composerId) return String(item.composerId); // Cursor's primary ID
     if (item.id) return String(item.id);
     if (item.conversationId) return String(item.conversationId);
     if (item.chatId) return String(item.chatId);

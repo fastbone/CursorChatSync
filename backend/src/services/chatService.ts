@@ -4,10 +4,21 @@ import permissionService from './permissionService';
 import chatLockService from './chatLockService';
 import chatExclusionService from './chatExclusionService';
 import { extractConversations, filterExcludedConversations } from '../utils/conversationIdExtractor';
+import { validateChatData } from '../utils/chatDataValidator';
 import { logger } from '../utils/logger';
 
 export class ChatService {
   async uploadChat(userId: number, input: UploadChatInput): Promise<ChatHistory> {
+    // Validate chat data structure
+    const validation = validateChatData(input.chat_data);
+    if (!validation.isValid) {
+      logger.logSync('upload', userId, input.project_id, false, new Error(`Invalid chat data: ${validation.errors.join(', ')}`));
+      throw new Error(`Invalid chat data: ${validation.errors.join(', ')}`);
+    }
+    if (validation.warnings.length > 0) {
+      logger.warn('Chat data validation warnings', { userId, projectId: input.project_id, warnings: validation.warnings });
+    }
+    
     // Check permissions
     const canSync = await permissionService.canUserSyncProject(userId, input.project_id);
     

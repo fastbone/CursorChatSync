@@ -4,6 +4,7 @@ import { AuthService } from './auth/authService';
 import { ApiClient } from './api/apiClient';
 import { registerCommands } from './commands/syncCommands';
 import { registerChatLockCommands } from './commands/chatLockCommands';
+import { registerBackupCommands } from './commands/backupCommands';
 import { ChatLockService } from './sync/chatLockService';
 
 let syncManager: SyncManager | null = null;
@@ -35,6 +36,16 @@ export function activate(context: vscode.ExtensionContext) {
   // Register commands
   registerCommands(context, syncManager);
   registerChatLockCommands(context, chatLockService, apiClientForCommands);
+  
+  // Register backup commands
+  // Create dbWriter instance for backup commands (will share same backup directory)
+  const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+  const workspacePath = workspaceFolder?.uri.fsPath;
+  const maxBackups = config.get<number>('maxBackups', 10);
+  const { DbWriter } = require('./sync/dbWriter');
+  const dbWriter = new DbWriter(workspacePath);
+  dbWriter.getBackupService().setMaxBackups(maxBackups);
+  registerBackupCommands(context, dbWriter);
 
   // Start auto-sync if enabled
   if (enableAutoSync && AuthService.isAuthenticated()) {

@@ -28,8 +28,9 @@ export function extractConversations(chatData: any): Map<string, any> {
     });
   } else {
     // Strategy 2: Look for common conversation keys
+    // Also check for Cursor's reconstructed format with conversations array
     const conversationKeys = [
-      'conversations',
+      'conversations', // Cursor's reconstructed format
       'chats',
       'history',
       'messages',
@@ -70,7 +71,8 @@ export function extractConversations(chatData: any): Map<string, any> {
  * Extract a single conversation ID from a conversation object
  */
 function extractConversationId(conversation: any, fallbackIndex: number): string {
-  // Try common ID fields
+  // Try common ID fields (including Cursor's composerId)
+  if (conversation?.composerId) return String(conversation.composerId); // Cursor's primary ID
   if (conversation?.conversationId) return String(conversation.conversationId);
   if (conversation?.chatId) return String(conversation.chatId);
   if (conversation?.id) return String(conversation.id);

@@ -24,8 +24,15 @@ export class SyncManager {
 
   constructor(apiUrl: string) {
     this.apiClient = new ApiClient(apiUrl);
-    this.dbReader = new DbReader();
-    this.dbWriter = new DbWriter();
+    // Get workspace folder for workspace storage support
+    const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+    const workspacePath = workspaceFolder?.uri.fsPath;
+    this.dbReader = new DbReader(workspacePath);
+    
+    // Get backup configuration
+    const config = vscode.workspace.getConfiguration('cursorChatSync');
+    const maxBackups = config.get<number>('maxBackups', 10);
+    this.dbWriter = new DbWriter(workspacePath, maxBackups);
     this.chatLockService = new ChatLockService(this.apiClient);
 
     // Set token if available
@@ -336,7 +343,10 @@ export class SyncManager {
             const merged = this.dbWriter.mergeChatHistory(remoteChat.chat_data, localChatData);
             
             // Write merged data back to local database
-            this.dbWriter.writeChatHistory(merged);
+            // Check if backup should be created before sync
+            const config = vscode.workspace.getConfiguration('cursorChatSync');
+            const backupBeforeSync = config.get<boolean>('backupBeforeSync', true);
+            await this.dbWriter.writeChatHistory(merged, true, backupBeforeSync);
             
             // If there were changes from remote, upload the merged version
             // This ensures both sides have the complete merged data

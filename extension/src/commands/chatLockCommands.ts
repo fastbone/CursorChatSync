@@ -36,7 +36,8 @@ export function registerChatLockCommands(
         }
 
         // Read chat data to get conversations
-        const dbReader = new DbReader();
+        const workspacePath = workspaceFolder.uri.fsPath;
+        const dbReader = new DbReader(workspacePath);
         if (!dbReader.exists()) {
           vscode.window.showErrorMessage('state.vscdb not found');
           return;
@@ -95,7 +96,8 @@ export function registerChatLockCommands(
         const locks = await apiClient.getExclusions(projectId);
         // Actually, we need to get locks, not exclusions. Let me fix this.
         // For now, read chat data and let user select
-        const dbReader = new DbReader();
+        const workspacePath = workspaceFolder.uri.fsPath;
+        const dbReader = new DbReader(workspacePath);
         if (!dbReader.exists()) {
           vscode.window.showErrorMessage('state.vscdb not found');
           return;
@@ -149,7 +151,8 @@ export function registerChatLockCommands(
           return;
         }
 
-        const dbReader = new DbReader();
+        const workspacePath = workspaceFolder.uri.fsPath;
+        const dbReader = new DbReader(workspacePath);
         if (!dbReader.exists()) {
           vscode.window.showErrorMessage('state.vscdb not found');
           return;
@@ -251,7 +254,8 @@ export function registerChatLockCommands(
           return;
         }
 
-        const dbReader = new DbReader();
+        const workspacePath = workspaceFolder.uri.fsPath;
+        const dbReader = new DbReader(workspacePath);
         if (!dbReader.exists()) {
           vscode.window.showErrorMessage('state.vscdb not found');
           return;
