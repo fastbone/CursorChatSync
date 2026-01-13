@@ -67,7 +67,7 @@ export class AuthService {
     const token = jwt.sign(
       { id: user.id, email: user.email, is_admin: user.is_admin },
       JWT_SECRET,
-      { expiresIn: JWT_EXPIRES_IN } as SignOptions
+      { expiresIn: JWT_EXPIRES_IN }
     );
     
     return {
