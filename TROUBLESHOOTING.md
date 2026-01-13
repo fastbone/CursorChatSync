@@ -179,15 +179,15 @@ Then update `tsconfig.json`:
 **Solutions**:
 1. Check logs:
    ```bash
-   docker-compose logs backend
-   docker-compose logs admin-ui
+   docker compose logs backend
+   docker compose logs admin-ui
    ```
 
 2. Verify environment variables in `docker-compose.yml`
 
 3. Check database connection from container:
    ```bash
-   docker-compose exec backend npm run migrate
+   docker compose exec backend npm run migrate
    ```
 
 ### Port Already in Use
@@ -273,6 +273,6 @@ dropdb cursor_chat_sync && createdb cursor_chat_sync
 npm run migrate
 
 # Restart Docker services
-docker-compose down
-docker-compose up -d
+docker compose down
+docker compose up -d
 ```

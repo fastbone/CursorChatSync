@@ -55,9 +55,16 @@ else
     print_status "Docker version: $(docker --version)"
 fi
 
-if ! command -v docker-compose &> /dev/null && [ "$DOCKER_AVAILABLE" = true ]; then
-    print_warning "docker-compose is not installed. Docker Compose setup will be skipped."
-    DOCKER_AVAILABLE=false
+# Check for docker compose (newer) or docker-compose (older)
+if [ "$DOCKER_AVAILABLE" = true ]; then
+    if docker compose version &> /dev/null; then
+        DOCKER_COMPOSE_CMD="docker compose"
+    elif command -v docker-compose &> /dev/null; then
+        DOCKER_COMPOSE_CMD="docker-compose"
+    else
+        print_warning "docker compose is not available. Docker Compose setup will be skipped."
+        DOCKER_AVAILABLE=false
+    fi
 fi
 
 print_status "Prerequisites check passed!"
@@ -125,7 +132,7 @@ if [ "$DOCKER_AVAILABLE" = true ]; then
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         print_status "Starting Docker containers..."
-        docker-compose up -d postgres
+        $DOCKER_COMPOSE_CMD up -d postgres
         
         print_status "Waiting for PostgreSQL to be ready..."
         sleep 5
@@ -182,5 +189,5 @@ echo "  4. Start backend: cd backend && npm run dev"
 echo "  5. Start admin UI: cd admin-ui && npm run dev"
 echo "  6. Install extension in Cursor/VS Code"
 echo ""
-print_status "For Docker setup, run: docker-compose up -d"
+print_status "For Docker setup, run: docker compose up -d"
 print_status "For more information, see README.md"

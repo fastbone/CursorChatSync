@@ -188,22 +188,22 @@ npm run compile
 ### Development with Docker
 ```bash
 # Start all services
-docker-compose up -d
+docker compose up -d
 
 # View logs
-docker-compose logs -f
+docker compose logs -f
 
-# Run migrations
-docker-compose exec backend npm run migrate
+# Run migrations (migrations now run automatically on startup)
+docker compose exec backend npm run migrate
 
 # Stop services
-docker-compose down
+docker compose down
 ```
 
 ### Production Build
 ```bash
 # Build images
-docker-compose build
+docker compose build
 
 # Or use npm script
 npm run docker:build
@@ -236,7 +236,7 @@ npm run docker:build
 ### Docker Issues
 1. Ensure Docker and Docker Compose are installed
 2. Check Docker daemon is running
-3. Verify `docker-compose.yml` syntax
+3. Verify `docker-compose.yml` syntax (file name remains the same)
 
 ## CI/CD Integration
 

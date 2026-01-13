@@ -124,7 +124,7 @@ cp backend/.env.example backend/.env
 
 4. Start all services (PostgreSQL will be set up automatically):
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 The backend will automatically:
