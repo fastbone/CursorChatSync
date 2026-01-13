@@ -177,6 +177,40 @@ export class SyncManager {
     }, debounceMs);
   }
 
+  updateApiUrl(newApiUrl: string): void {
+    // Stop current operations
+    this.stopAutoSync();
+    this.stopFileWatching();
+    
+    // Create new API client with new URL
+    this.apiClient = new ApiClient(newApiUrl);
+    
+    // Recreate chat lock service with new API client
+    this.chatLockService.dispose();
+    this.chatLockService = new ChatLockService(this.apiClient);
+    
+    // Restore token if available
+    const token = AuthService.getToken();
+    if (token) {
+      this.apiClient.setToken(token);
+    }
+    
+    // Restart services if they were enabled
+    const config = vscode.workspace.getConfiguration('cursorChatSync');
+    const enableAutoSync = config.get<boolean>('enableAutoSync', true);
+    const enableFileWatching = config.get<boolean>('enableFileWatching', true);
+    const autoSyncInterval = config.get<number>('autoSyncInterval', 600000);
+    const fileWatchDebounce = config.get<number>('fileWatchDebounce', 5000);
+    
+    if (enableAutoSync && AuthService.isAuthenticated()) {
+      this.startAutoSync(autoSyncInterval);
+    }
+    
+    if (enableFileWatching && AuthService.isAuthenticated()) {
+      this.startFileWatching(fileWatchDebounce);
+    }
+  }
+
   dispose(): void {
     this.stopAutoSync();
     this.stopFileWatching();

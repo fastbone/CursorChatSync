@@ -78,9 +78,15 @@ build.bat --install
 - `--backend-only` - Build only the backend
 - `--admin-only` - Build only the admin UI
 - `--extension-only` - Build only the extension
+- `--package-extension` - Package extension as .vsix file (requires extension to be built)
 - `--install` - Install dependencies before building
 - `--clean` - Clean build (remove node_modules and dist)
 - `--help` - Show help message
+
+**Example: Build and package extension**
+```bash
+./build.sh --extension-only --package-extension
+```
 
 ### Using npm Scripts
 
@@ -136,6 +142,48 @@ The backend will automatically:
    - Backend API: http://localhost:3000
    - Admin UI: http://localhost:80
    - PostgreSQL: localhost:5432
+
+### Using Production Docker Images (GitHub Container Registry)
+
+For production deployments, you can use pre-built Docker images from GitHub Container Registry:
+
+1. **Authenticate with GitHub Container Registry:**
+   ```bash
+   # Using GitHub Personal Access Token (PAT)
+   echo $GITHUB_TOKEN | docker login ghcr.io -u USERNAME --password-stdin
+   
+   # Or using password prompt
+   docker login ghcr.io -u USERNAME
+   ```
+   
+   Create a PAT with `read:packages` permission at: https://github.com/settings/tokens
+
+2. **Download the production docker-compose file:**
+   - Download `docker-compose.prod.yml` from the latest release
+   - Or use the one in the repository (update image paths with your repository)
+
+3. **Update image paths in docker-compose.prod.yml:**
+   ```yaml
+   # Replace OWNER/REPO with your GitHub repository
+   # Example: ghcr.io/yourusername/cursorchatsync/backend:latest
+   ```
+
+4. **Create environment file:**
+   ```bash
+   # Create .env.prod with your configuration
+   DB_NAME=cursor_chat_sync
+   DB_USER=postgres
+   DB_PASSWORD=your-secure-password
+   JWT_SECRET=your-secret-key-change-in-production
+   JWT_EXPIRES_IN=7d
+   ```
+
+5. **Start services:**
+   ```bash
+   docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
+   ```
+
+**Note:** Images are automatically built and pushed to GitHub Container Registry on each successful build to the main branch. Check the [Releases](https://github.com/YOUR_REPO/releases) page for the latest images.
 
 ### Manual Setup
 
@@ -222,11 +270,39 @@ npm install
 npm run compile
 ```
 
-4. Install the extension:
-   - Open Cursor/VS Code
-   - Press `F5` to run the extension in development mode, or
-   - Package the extension: `vsce package` (requires `vsce` tool)
-   - Install the `.vsix` file in Cursor
+4. **Install the extension** (choose one method):
+
+   **Method A: Package as .vsix (Recommended for distribution)**
+   ```bash
+   # From extension directory
+   npm run package
+   
+   # Or from project root
+   ./build.sh --extension-only --package-extension
+   ```
+   
+   Then install in Cursor/VS Code:
+   ```bash
+   # Using command line
+   code --install-extension extension/cursor-chat-sync.vsix
+   
+   # Or manually:
+   # 1. Open Cursor/VS Code
+   # 2. Go to Extensions view (Ctrl+Shift+X / Cmd+Shift+X)
+   # 3. Click "..." menu → "Install from VSIX..."
+   # 4. Select the cursor-chat-sync.vsix file
+   ```
+
+   **Method B: Development mode**
+   - Open the project in Cursor/VS Code
+   - Press `F5` to run the extension in development mode
+   - This launches a new Extension Development Host window
+
+5. **Configure the server address**:
+   - After installation, open Command Palette (Ctrl+Shift+P / Cmd+Shift+P)
+   - Run: `Cursor Chat Sync: Quick Setup: Configure Server`
+   - Follow the setup wizard to configure your server URL
+   - Or manually edit settings: `cursorChatSync.apiUrl`
 
 ## Configuration
 
@@ -246,21 +322,35 @@ JWT_EXPIRES_IN=7d
 
 ### Extension Configuration
 
-In Cursor/VS Code settings:
+**Easy Configuration (Recommended)**:
+- Use the Quick Setup wizard: `Cursor Chat Sync: Quick Setup: Configure Server`
+- This provides a guided setup with presets and connection testing
+
+**Manual Configuration**:
+In Cursor/VS Code settings (search for "cursorChatSync"):
 - `cursorChatSync.apiUrl`: Backend API URL (default: `http://localhost:3000/api`)
+  - Can be changed via Quick Setup wizard or Settings UI
+  - Changes take effect immediately (no restart required)
 - `cursorChatSync.autoSyncInterval`: Auto-sync interval in milliseconds (default: 600000 = 10 minutes)
 - `cursorChatSync.enableAutoSync`: Enable automatic syncing (default: true)
+- `cursorChatSync.enableFileWatching`: Enable file watching for auto-sync (default: true)
+- `cursorChatSync.fileWatchDebounce`: Debounce delay in milliseconds (default: 5000 = 5 seconds)
 
 ## Usage
 
 ### Extension Usage
 
 1. **Install the Extension**:
-   - Build the extension: `cd extension && npm run compile`
-   - Package: `vsce package` (requires `vsce`: `npm install -g @vscode/vsce`)
-   - Install the `.vsix` file in Cursor
+   - See [Extension Setup](#extension-setup) section above for detailed instructions
+   - Quick method: `./build.sh --extension-only --package-extension` then install the `.vsix` file
 
-2. **Login**:
+2. **Quick Setup (First Time)**:
+   - Open Command Palette (Ctrl+Shift+P / Cmd+Shift+P)
+   - Run: `Cursor Chat Sync: Quick Setup: Configure Server`
+   - Follow the wizard to configure your server URL
+   - The wizard includes connection testing
+
+3. **Login**:
    - Open Command Palette (Ctrl+Shift+P / Cmd+Shift+P)
    - Run: `Cursor Chat Sync: Login`
    - Enter your email and password
@@ -277,8 +367,9 @@ In Cursor/VS Code settings:
    - Run `Cursor Chat Sync: Show Sync Status` for detailed info
 
 5. **Configure**:
-   - Run `Cursor Chat Sync: Open Chat Sync Settings`
-   - Or edit VS Code settings directly
+   - **Quick Setup**: Run `Cursor Chat Sync: Quick Setup: Configure Server` (recommended for first-time setup)
+   - **Advanced Settings**: Run `Cursor Chat Sync: Open Chat Sync Settings`
+   - **Manual**: Edit VS Code settings directly (search for "cursorChatSync")
 
 ### Initial Setup
 

@@ -46,6 +46,7 @@ BUILD_ADMIN=true
 BUILD_EXTENSION=true
 INSTALL_DEPS=false
 CLEAN_BUILD=false
+PACKAGE_EXTENSION=false
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -64,6 +65,10 @@ while [[ $# -gt 0 ]]; do
             BUILD_ADMIN=false
             shift
             ;;
+        --package-extension)
+            PACKAGE_EXTENSION=true
+            shift
+            ;;
         --install)
             INSTALL_DEPS=true
             shift
@@ -76,12 +81,13 @@ while [[ $# -gt 0 ]]; do
             echo "Usage: ./build.sh [options]"
             echo ""
             echo "Options:"
-            echo "  --backend-only    Build only the backend"
-            echo "  --admin-only     Build only the admin UI"
-            echo "  --extension-only Build only the extension"
-            echo "  --install        Install dependencies before building"
-            echo "  --clean          Clean build (remove node_modules and dist)"
-            echo "  --help           Show this help message"
+            echo "  --backend-only      Build only the backend"
+            echo "  --admin-only        Build only the admin UI"
+            echo "  --extension-only    Build only the extension"
+            echo "  --package-extension Package extension as .vsix file"
+            echo "  --install           Install dependencies before building"
+            echo "  --clean             Clean build (remove node_modules and dist)"
+            echo "  --help              Show this help message"
             exit 0
             ;;
         *)
@@ -196,6 +202,23 @@ if [ "$BUILD_EXTENSION" = true ]; then
     else
         print_error "Extension build failed!"
         exit 1
+    fi
+    
+    # Package extension if requested
+    if [ "$PACKAGE_EXTENSION" = true ]; then
+        print_status "Packaging extension as .vsix..."
+        if ! command -v npx &> /dev/null; then
+            print_error "npx is not available. Cannot package extension."
+            exit 1
+        fi
+        npx @vscode/vsce package --out cursor-chat-sync.vsix
+        if [ $? -eq 0 ]; then
+            print_status "Extension packaged successfully: extension/cursor-chat-sync.vsix"
+            print_status "You can install it in Cursor/VS Code using: code --install-extension cursor-chat-sync.vsix"
+        else
+            print_error "Extension packaging failed!"
+            exit 1
+        fi
     fi
     cd ..
 fi

@@ -36,6 +36,10 @@
         "title": "Open Chat Sync Settings"
       },
       {
+        "command": "cursorChatSync.quickSetup",
+        "title": "Quick Setup: Configure Server"
+      },
+      {
         "command": "cursorChatSync.lockChat",
         "title": "Lock Chat"
       },
@@ -135,12 +139,15 @@
   "scripts": {
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
-    "watch": "tsc -watch -p ./"
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package",
+    "package:patch": "vsce package --out cursor-chat-sync.vsix"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.11",
     "@types/node": "^20.10.5",
     "@types/vscode": "^1.74.0",
+    "@vscode/vsce": "^2.22.0",
     "typescript": "^5.3.3"
   },
   "dependencies": {

@@ -107,8 +107,7 @@ export function registerCommands(
 
       if (newApiUrl) {
         await config.update('apiUrl', newApiUrl, vscode.ConfigurationTarget.Global);
-        vscode.window.showInformationMessage(`API URL updated to: ${newApiUrl}`);
-        vscode.window.showWarningMessage('Please restart the extension for changes to take effect.');
+        vscode.window.showInformationMessage(`✓ API URL updated to: ${newApiUrl}\nChanges take effect immediately.`);
       }
     } else if (action === 'Test Connection') {
       try {
@@ -130,5 +129,117 @@ export function registerCommands(
     }
   });
 
-  context.subscriptions.push(loginCommand, logoutCommand, syncNowCommand, statusCommand, settingsCommand);
+  // Quick setup command
+  const quickSetupCommand = vscode.commands.registerCommand('cursorChatSync.quickSetup', async () => {
+    const config = vscode.workspace.getConfiguration('cursorChatSync');
+    const currentApiUrl = config.get<string>('apiUrl', 'http://localhost:3000/api');
+
+    // Show welcome message
+    const welcomeMessage = await vscode.window.showInformationMessage(
+      'Welcome to Cursor Chat Sync Quick Setup!\n\nThis will help you configure the server address.',
+      { modal: true },
+      'Start Setup'
+    );
+
+    if (!welcomeMessage) {
+      return;
+    }
+
+    // Preset options
+    const presetOptions = [
+      { label: 'Local Development', value: 'http://localhost:3000/api', description: 'For local development' },
+      { label: 'Custom URL', value: 'custom', description: 'Enter a custom server URL' },
+    ];
+
+    const preset = await vscode.window.showQuickPick(presetOptions, {
+      placeHolder: 'Select a server preset or choose custom',
+      ignoreFocusOut: true,
+    });
+
+    if (!preset) {
+      return;
+    }
+
+    let apiUrl: string | undefined;
+
+    if (preset.value === 'custom') {
+      apiUrl = await vscode.window.showInputBox({
+        prompt: 'Enter your Chat Sync server URL',
+        value: currentApiUrl,
+        placeHolder: 'https://your-server.com/api',
+        validateInput: (value) => {
+          if (!value || value.trim().length === 0) {
+            return 'URL cannot be empty';
+          }
+          try {
+            const url = new URL(value);
+            if (!url.protocol.startsWith('http')) {
+              return 'URL must start with http:// or https://';
+            }
+            return null;
+          } catch {
+            return 'Please enter a valid URL (e.g., https://example.com/api)';
+          }
+        },
+        ignoreFocusOut: true,
+      });
+    } else {
+      apiUrl = preset.value;
+    }
+
+    if (!apiUrl) {
+      return;
+    }
+
+    // Test connection
+    const testConnection = await vscode.window.showInformationMessage(
+      `Server URL: ${apiUrl}\n\nWould you like to test the connection?`,
+      { modal: true },
+      'Test Connection',
+      'Skip Test'
+    );
+
+    if (testConnection === 'Test Connection') {
+      vscode.window.showInformationMessage('Testing connection...');
+      try {
+        const response = await fetch(`${apiUrl}/health`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+        });
+
+        if (response.ok) {
+          vscode.window.showInformationMessage('✓ Connection successful!');
+        } else {
+          const proceed = await vscode.window.showWarningMessage(
+            `Connection test failed: ${response.status} ${response.statusText}\n\nDo you want to save this URL anyway?`,
+            { modal: true },
+            'Save Anyway',
+            'Cancel'
+          );
+          if (proceed !== 'Save Anyway') {
+            return;
+          }
+        }
+      } catch (error: any) {
+        const proceed = await vscode.window.showWarningMessage(
+          `Connection test failed: ${error.message}\n\nDo you want to save this URL anyway?`,
+          { modal: true },
+          'Save Anyway',
+          'Cancel'
+        );
+        if (proceed !== 'Save Anyway') {
+          return;
+        }
+      }
+    }
+
+    // Save configuration
+    await config.update('apiUrl', apiUrl, vscode.ConfigurationTarget.Global);
+    vscode.window.showInformationMessage(
+      `✓ Server URL configured: ${apiUrl}\n\nYou can now login using the "Login to Chat Sync" command.`,
+      { modal: true }
+    );
+  });
+
+  context.subscriptions.push(loginCommand, logoutCommand, syncNowCommand, statusCommand, settingsCommand, quickSetupCommand);
 }

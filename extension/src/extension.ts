@@ -62,21 +62,33 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.workspace.onDidChangeConfiguration((e) => {
       if (e.affectsConfiguration('cursorChatSync')) {
         const newConfig = vscode.workspace.getConfiguration('cursorChatSync');
+        const newApiUrl = newConfig.get<string>('apiUrl', 'http://localhost:3000/api');
         const newInterval = newConfig.get<number>('autoSyncInterval', 600000);
         const newEnableAutoSync = newConfig.get<boolean>('enableAutoSync', true);
         const newEnableFileWatching = newConfig.get<boolean>('enableFileWatching', true);
         const newFileWatchDebounce = newConfig.get<number>('fileWatchDebounce', 5000);
 
-        if (syncManager) {
-          syncManager.stopAutoSync();
-          syncManager.stopFileWatching();
-          
-          if (newEnableAutoSync && AuthService.isAuthenticated()) {
-            syncManager.startAutoSync(newInterval);
+        // If API URL changed, update sync manager
+        if (e.affectsConfiguration('cursorChatSync.apiUrl')) {
+          if (syncManager) {
+            syncManager.updateApiUrl(newApiUrl);
+          } else {
+            // If syncManager doesn't exist yet, create it
+            syncManager = new SyncManager(newApiUrl);
           }
-          
-          if (newEnableFileWatching && AuthService.isAuthenticated()) {
-            syncManager.startFileWatching(newFileWatchDebounce);
+        } else {
+          // Only update sync intervals and file watching settings
+          if (syncManager) {
+            syncManager.stopAutoSync();
+            syncManager.stopFileWatching();
+            
+            if (newEnableAutoSync && AuthService.isAuthenticated()) {
+              syncManager.startAutoSync(newInterval);
+            }
+            
+            if (newEnableFileWatching && AuthService.isAuthenticated()) {
+              syncManager.startFileWatching(newFileWatchDebounce);
+            }
           }
         }
       }
