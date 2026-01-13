@@ -84,8 +84,84 @@
       {
         "command": "cursorChatSync.showBackupInfo",
         "title": "Show Backup Information"
+      },
+      {
+        "command": "cursorChatSync.syncConversation",
+        "title": "Sync This Chat",
+        "icon": "$(sync)"
+      },
+      {
+        "command": "cursorChatSync.lockConversation",
+        "title": "Lock This Chat",
+        "icon": "$(lock)"
+      },
+      {
+        "command": "cursorChatSync.unlockConversation",
+        "title": "Unlock This Chat",
+        "icon": "$(unlock)"
+      },
+      {
+        "command": "cursorChatSync.excludeConversation",
+        "title": "Exclude from Sync",
+        "icon": "$(eye-closed)"
+      },
+      {
+        "command": "cursorChatSync.includeConversation",
+        "title": "Include in Sync",
+        "icon": "$(eye)"
       }
     ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "cursorChatSync.syncConversation",
+          "when": "cursorChatSync.isAuthenticated && workspaceFolderCount > 0",
+          "group": "cursorChatSync@1"
+        },
+        {
+          "command": "cursorChatSync.lockConversation",
+          "when": "cursorChatSync.isAuthenticated && workspaceFolderCount > 0",
+          "group": "cursorChatSync@2"
+        },
+        {
+          "command": "cursorChatSync.unlockConversation",
+          "when": "cursorChatSync.isAuthenticated && workspaceFolderCount > 0",
+          "group": "cursorChatSync@2"
+        },
+        {
+          "command": "cursorChatSync.excludeConversation",
+          "when": "cursorChatSync.isAuthenticated && workspaceFolderCount > 0",
+          "group": "cursorChatSync@3"
+        },
+        {
+          "command": "cursorChatSync.includeConversation",
+          "when": "cursorChatSync.isAuthenticated && workspaceFolderCount > 0",
+          "group": "cursorChatSync@3"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "cursorChatSync.syncConversation",
+          "when": "cursorChatSync.isAuthenticated"
+        },
+        {
+          "command": "cursorChatSync.lockConversation",
+          "when": "cursorChatSync.isAuthenticated"
+        },
+        {
+          "command": "cursorChatSync.unlockConversation",
+          "when": "cursorChatSync.isAuthenticated"
+        },
+        {
+          "command": "cursorChatSync.excludeConversation",
+          "when": "cursorChatSync.isAuthenticated"
+        },
+        {
+          "command": "cursorChatSync.includeConversation",
+          "when": "cursorChatSync.isAuthenticated"
+        }
+      ]
+    },
     "configuration": {
       "title": "Cursor Chat Sync",
       "properties": {

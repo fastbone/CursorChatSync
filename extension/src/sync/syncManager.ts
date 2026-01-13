@@ -6,7 +6,7 @@ import { AuthService } from '../auth/authService';
 import { DbReader } from './dbReader';
 import { DbWriter } from './dbWriter';
 import { ChatLockService } from './chatLockService';
-import { filterExcludedConversations } from '../utils/conversationIdExtractor';
+import { filterExcludedConversations, extractConversations } from '../utils/conversationIdExtractor';
 import { logger } from '../utils/logger';
 
 export class SyncManager {
@@ -235,6 +235,25 @@ export class SyncManager {
       AuthService.setUser(response.user);
       this.apiClient.setToken(response.token);
       logger.logAuth('login', true);
+      
+      // Update status bar after successful login
+      this.updateStatusBar();
+      
+      // Start auto-sync and file watching if enabled
+      const config = vscode.workspace.getConfiguration('cursorChatSync');
+      const enableAutoSync = config.get<boolean>('enableAutoSync', true);
+      const enableFileWatching = config.get<boolean>('enableFileWatching', true);
+      const autoSyncInterval = config.get<number>('autoSyncInterval', 600000);
+      const fileWatchDebounce = config.get<number>('fileWatchDebounce', 5000);
+      
+      if (enableAutoSync) {
+        this.startAutoSync(autoSyncInterval);
+      }
+      
+      if (enableFileWatching) {
+        this.startFileWatching(fileWatchDebounce);
+      }
+      
       vscode.window.showInformationMessage('Successfully logged in to Chat Sync');
       return true;
     } catch (error: any) {
@@ -251,7 +270,7 @@ export class SyncManager {
     this.updateStatusBar();
   }
 
-  async syncNow(retryCount: number = 0): Promise<void> {
+  async syncNow(retryCount: number = 0, conversationId?: string): Promise<void> {
     if (this.isSyncing) {
       vscode.window.showInformationMessage('Sync already in progress...');
       return;
@@ -286,58 +305,89 @@ export class SyncManager {
 
       let localChatData = this.dbReader.readChatHistory();
 
-      // Get or find project ID
+      // If a specific conversation ID is provided, filter to only that conversation
+      if (conversationId) {
+        const conversations = extractConversations(localChatData);
+        const targetConversation = conversations.get(conversationId);
+        
+        if (!targetConversation) {
+          throw new Error(`Conversation ${conversationId} not found in local chat history`);
+        }
+
+        // Create a filtered chat data structure with only the target conversation
+        // Try to preserve the original structure
+        if (Array.isArray(localChatData)) {
+          localChatData = [targetConversation];
+        } else if (localChatData.conversations && Array.isArray(localChatData.conversations)) {
+          localChatData = {
+            ...localChatData,
+            conversations: [targetConversation],
+          };
+        } else {
+          // Fallback: create a simple structure
+          localChatData = {
+            conversations: [targetConversation],
+          };
+        }
+      }
+
+      // Get or find project ID (optional - backend will create if it doesn't exist)
       let projectId = AuthService.getProjectMapping(gitRepoUrl);
       
       // If no mapping exists, try to find project by repo URL
       if (!projectId) {
-        const project = await this.apiClient.getProjectByRepoUrl(gitRepoUrl);
-        if (project) {
-          projectId = project.id;
-          AuthService.setProjectMapping(gitRepoUrl, projectId);
+        try {
+          const project = await this.apiClient.getProjectByRepoUrl(gitRepoUrl);
+          if (project) {
+            projectId = project.id;
+            AuthService.setProjectMapping(gitRepoUrl, projectId);
+          }
+        } catch (error) {
+          // Project doesn't exist yet - that's okay, backend will create it
+          console.log('Project not found, will be created on upload');
         }
       }
 
-      if (!projectId) {
-        throw new Error('Project not found. Please sync first.');
-      }
-
-      // Sync exclusions from backend
-      await this.chatLockService.syncExclusions(projectId);
-
-      // Filter excluded conversations before sync
-      const excludedIds = this.chatLockService.getExclusions(projectId);
-      if (excludedIds.size > 0) {
-        localChatData = filterExcludedConversations(localChatData, excludedIds);
-      }
-
-      // Check for locks and show notification if any conversations are locked
+      // Get config for auto-locking (needed in error handler too)
       const config = vscode.workspace.getConfiguration('cursorChatSync');
-      const lockNotificationEnabled = config.get<boolean>('lockNotificationEnabled', true);
-      const { lockedIds, lockInfo } = await this.chatLockService.checkLocks(projectId, localChatData);
-      
-      if (lockedIds.length > 0 && lockNotificationEnabled) {
-        const lockedBy = Array.from(lockInfo.values())
-          .map((info) => info.locked_by_user_name || 'Unknown')
-          .join(', ');
-        vscode.window.showWarningMessage(
-          `Some chats are locked by ${lockedBy}. Read-only sync only.`
-        );
-      }
-
-      // Auto-lock conversations if enabled
       const enableAutoLocking = config.get<boolean>('enableAutoLocking', true);
       const autoLockTimeout = config.get<number>('autoLockTimeout', 900000) / 1000 / 60; // Convert ms to minutes
-      
-      if (enableAutoLocking) {
-        this.currentLockedConversations = await this.chatLockService.autoLockConversations(
-          projectId,
-          localChatData,
-          autoLockTimeout
-        );
+
+      // If we have a project ID, sync exclusions and check locks before upload
+      if (projectId) {
+        // Sync exclusions from backend
+        await this.chatLockService.syncExclusions(projectId);
+
+        // Filter excluded conversations before sync
+        const excludedIds = this.chatLockService.getExclusions(projectId);
+        if (excludedIds.size > 0) {
+          localChatData = filterExcludedConversations(localChatData, excludedIds);
+        }
+
+        // Check for locks and show notification if any conversations are locked
+        const lockNotificationEnabled = config.get<boolean>('lockNotificationEnabled', true);
+        const { lockedIds, lockInfo } = await this.chatLockService.checkLocks(projectId, localChatData);
+        
+        if (lockedIds.length > 0 && lockNotificationEnabled) {
+          const lockedBy = Array.from(lockInfo.values())
+            .map((info) => info.locked_by_user_name || 'Unknown')
+            .join(', ');
+          vscode.window.showWarningMessage(
+            `Some chats are locked by ${lockedBy}. Read-only sync only.`
+          );
+        }
+        
+        // Auto-lock conversations if enabled
+        if (enableAutoLocking) {
+          this.currentLockedConversations = await this.chatLockService.autoLockConversations(
+            projectId,
+            localChatData,
+            autoLockTimeout
+          );
+        }
       }
 
-      // Upload to server
+      // Upload to server (backend will create project if it doesn't exist)
       let uploadResponse;
       try {
         uploadResponse = await this.apiClient.uploadChat({
@@ -347,10 +397,20 @@ export class SyncManager {
           workstation_id: this.getWorkstationId(),
         });
         
-        // Store project mapping from upload response
+        // Store project mapping from upload response (this is the source of truth)
         if (uploadResponse.project) {
-          projectId = uploadResponse.project.id;
-          AuthService.setProjectMapping(gitRepoUrl, projectId);
+          const newProjectId = uploadResponse.project.id;
+          
+          // If this is a new project, sync exclusions now
+          if (projectId !== newProjectId) {
+            projectId = newProjectId;
+            AuthService.setProjectMapping(gitRepoUrl, projectId);
+            // Sync exclusions for the newly created project
+            await this.chatLockService.syncExclusions(projectId);
+          } else {
+            projectId = newProjectId;
+            AuthService.setProjectMapping(gitRepoUrl, projectId);
+          }
         }
 
         // Show warning if some conversations were locked
@@ -358,8 +418,8 @@ export class SyncManager {
           vscode.window.showWarningMessage(uploadResponse.lock_warning || 'Some conversations were locked');
         }
       } catch (error: any) {
-        // Auto-unlock on error
-        if (enableAutoLocking && this.currentLockedConversations.length > 0) {
+        // Auto-unlock on error (only if we had a projectId)
+        if (projectId && enableAutoLocking && this.currentLockedConversations.length > 0) {
           await this.chatLockService.autoUnlockConversations(projectId, this.currentLockedConversations);
           this.currentLockedConversations = [];
         }
@@ -384,7 +444,6 @@ export class SyncManager {
             
             // Write merged data back to local database
             // Check if backup should be created before sync
-            const config = vscode.workspace.getConfiguration('cursorChatSync');
             const backupBeforeSync = config.get<boolean>('backupBeforeSync', true);
             await this.dbWriter.writeChatHistory(merged, true, backupBeforeSync);
             
@@ -407,7 +466,7 @@ export class SyncManager {
       }
 
       // Auto-unlock conversations when sync completes successfully
-      if (enableAutoLocking && this.currentLockedConversations.length > 0) {
+      if (projectId && enableAutoLocking && this.currentLockedConversations.length > 0) {
         await this.chatLockService.autoUnlockConversations(projectId, this.currentLockedConversations);
         this.currentLockedConversations = [];
       }
@@ -435,7 +494,7 @@ export class SyncManager {
         
         // Retry after delay
         await new Promise(resolve => setTimeout(resolve, retryDelay));
-        return this.syncNow(retryCount + 1);
+        return this.syncNow(retryCount + 1, conversationId);
       }
 
       // Don't retry for permission errors or validation errors

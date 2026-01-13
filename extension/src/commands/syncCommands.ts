@@ -5,7 +5,9 @@ import { logger } from '../utils/logger';
 
 export function registerCommands(
   context: vscode.ExtensionContext,
-  syncManager: SyncManager | null
+  syncManager: SyncManager | null,
+  onSyncManagerCreated?: (manager: SyncManager) => void,
+  onFallbackStatusBarUpdate?: (text: string, tooltip: string, command: string) => void
 ) {
   // Login command
   const loginCommand = vscode.commands.registerCommand('cursorChatSync.login', async () => {
@@ -30,7 +32,12 @@ export function registerCommands(
 
     // If syncManager is null, create a temporary one for login
     if (syncManager) {
-      await syncManager.login(email, password);
+      const success = await syncManager.login(email, password);
+      if (success) {
+        // Status bar will be updated by syncManager.login()
+        // Update authentication context
+        vscode.commands.executeCommand('setContext', 'cursorChatSync.isAuthenticated', true);
+      }
     } else {
       // Create a temporary API client for login
       const config = vscode.workspace.getConfiguration('cursorChatSync');
@@ -42,16 +49,33 @@ export function registerCommands(
         const response = await apiClient.login(email, password);
         AuthService.setToken(response.token);
         AuthService.setUser(response.user);
-        vscode.window.showInformationMessage('Successfully logged in to Chat Sync');
         
-        // Try to recreate sync manager now that we're authenticated
+        // Update authentication context
+        vscode.commands.executeCommand('setContext', 'cursorChatSync.isAuthenticated', true);
+        
+        // Update fallback status bar if callback provided
+        if (onFallbackStatusBarUpdate) {
+          const user = AuthService.getUser();
+          onFallbackStatusBarUpdate(
+            '$(check) Chat Sync: Logged in',
+            `Logged in as ${user?.name || user?.email || 'User'}. Click to sync.`,
+            'cursorChatSync.syncNow'
+          );
+        }
+        
+        // Try to create sync manager now that we're authenticated
         try {
           const { SyncManager } = require('../sync/syncManager');
           const newSyncManager = new SyncManager(apiUrl);
-          // Note: We can't replace the global syncManager here, but at least login worked
-        } catch (error) {
-          // Ignore - sync manager creation failed but login succeeded
+          if (onSyncManagerCreated) {
+            onSyncManagerCreated(newSyncManager);
+          }
+        } catch (error: any) {
+          console.error('Failed to create sync manager after login:', error);
+          // Continue with fallback status bar
         }
+        
+        vscode.window.showInformationMessage('Successfully logged in to Chat Sync');
       } catch (error: any) {
         vscode.window.showErrorMessage(`Login failed: ${error.message}`);
       }
@@ -65,6 +89,8 @@ export function registerCommands(
     } else {
       AuthService.logout();
     }
+    // Update authentication context
+    vscode.commands.executeCommand('setContext', 'cursorChatSync.isAuthenticated', false);
   });
 
   // Sync now command

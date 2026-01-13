@@ -5,7 +5,9 @@ import { ApiClient } from './api/apiClient';
 import { registerCommands } from './commands/syncCommands';
 import { registerChatLockCommands } from './commands/chatLockCommands';
 import { registerBackupCommands } from './commands/backupCommands';
+import { registerContextMenuCommands } from './commands/contextMenuCommands';
 import { ChatLockService } from './sync/chatLockService';
+import { getActiveConversationDetector } from './utils/activeConversationDetector';
 
 let syncManager: SyncManager | null = null;
 let fallbackStatusBar: vscode.StatusBarItem | null = null;
@@ -58,15 +60,35 @@ export function activate(context: vscode.ExtensionContext) {
     }
     const chatLockService = new ChatLockService(apiClientForCommands);
 
-    // Register commands
+    // Register commands with callbacks to update global state
+    const onSyncManagerCreated = (manager: SyncManager) => {
+      syncManager = manager;
+      // Dispose fallback status bar if it exists
+      if (fallbackStatusBar) {
+        fallbackStatusBar.dispose();
+        fallbackStatusBar = null;
+      }
+    };
+    
+    const onFallbackStatusBarUpdate = (text: string, tooltip: string, command: string) => {
+      if (fallbackStatusBar) {
+        fallbackStatusBar.text = text;
+        fallbackStatusBar.tooltip = tooltip;
+        fallbackStatusBar.command = command;
+      }
+    };
+    
     if (syncManager) {
-      registerCommands(context, syncManager);
+      registerCommands(context, syncManager, onSyncManagerCreated, onFallbackStatusBarUpdate);
     } else {
       // Register commands with a null sync manager - they'll handle it gracefully
-      registerCommands(context, null as any);
+      registerCommands(context, null as any, onSyncManagerCreated, onFallbackStatusBarUpdate);
     }
 
     registerChatLockCommands(context, chatLockService, apiClientForCommands);
+    
+    // Register context menu commands
+    registerContextMenuCommands(context, syncManager, chatLockService, apiClientForCommands);
     
     // Register backup commands
     // Create dbWriter instance for backup commands (will share same backup directory)
@@ -92,6 +114,21 @@ export function activate(context: vscode.ExtensionContext) {
     if (syncManager && enableFileWatching && AuthService.isAuthenticated()) {
       syncManager.startFileWatching(fileWatchDebounce);
     }
+
+    // Set up context tracking for authentication status
+    updateAuthenticationContext();
+    
+    // Watch for authentication changes
+    context.subscriptions.push(
+      vscode.workspace.onDidChangeConfiguration((e) => {
+        if (e.affectsConfiguration('cursorChatSync')) {
+          updateAuthenticationContext();
+        }
+      })
+    );
+
+    // Set up active conversation tracking
+    setupActiveConversationTracking(context, syncManager);
 
     // Watch for configuration changes
     context.subscriptions.push(
@@ -162,6 +199,72 @@ export function activate(context: vscode.ExtensionContext) {
   }
 }
 
+/**
+ * Update VS Code context variables for authentication status
+ */
+function updateAuthenticationContext(): void {
+  const isAuthenticated = AuthService.isAuthenticated();
+  vscode.commands.executeCommand('setContext', 'cursorChatSync.isAuthenticated', isAuthenticated);
+}
+
+/**
+ * Set up tracking for active conversation
+ * Updates context when database changes are detected
+ */
+function setupActiveConversationTracking(
+  context: vscode.ExtensionContext,
+  syncManager: SyncManager | null
+): void {
+  let updateTimer: NodeJS.Timeout | null = null;
+  const updateInterval = 3000; // Update every 3 seconds
+
+  async function updateActiveConversation() {
+    try {
+      const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+      const workspacePath = workspaceFolder?.uri.fsPath;
+      
+      if (!workspacePath) {
+        vscode.commands.executeCommand('setContext', 'cursorChatSync.activeConversationId', undefined);
+        return;
+      }
+
+      const detector = getActiveConversationDetector(workspacePath);
+      const activeId = await detector.detectActiveConversation(workspacePath);
+      
+      if (activeId) {
+        vscode.commands.executeCommand('setContext', 'cursorChatSync.activeConversationId', activeId);
+      } else {
+        vscode.commands.executeCommand('setContext', 'cursorChatSync.activeConversationId', undefined);
+      }
+    } catch (error: any) {
+      // Silently handle errors - don't spam console
+      console.debug('Failed to update active conversation:', error.message);
+    }
+  }
+
+  // Initial update
+  updateActiveConversation();
+
+  // Set up periodic updates
+  updateTimer = setInterval(updateActiveConversation, updateInterval);
+
+  // Also update when database file changes (if file watching is enabled)
+  if (syncManager) {
+    // We'll hook into the file watcher's change detection
+    // For now, the periodic update should be sufficient
+  }
+
+  // Clear interval on deactivation
+  context.subscriptions.push({
+    dispose: () => {
+      if (updateTimer) {
+        clearInterval(updateTimer);
+        updateTimer = null;
+      }
+    }
+  });
+}
+
 export function deactivate() {
   if (syncManager) {
     syncManager.stopAutoSync();
@@ -172,4 +275,7 @@ export function deactivate() {
     fallbackStatusBar.dispose();
     fallbackStatusBar = null;
   }
+  // Clear context variables
+  vscode.commands.executeCommand('setContext', 'cursorChatSync.isAuthenticated', false);
+  vscode.commands.executeCommand('setContext', 'cursorChatSync.activeConversationId', undefined);
 }
