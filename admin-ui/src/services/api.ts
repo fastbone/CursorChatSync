@@ -70,4 +70,11 @@ export const teamsAPI = {
     api.delete(`/teams/${teamId}/members/${userId}`),
 };
 
+export const chatAPI = {
+  getHistory: (projectId?: number) => {
+    const params = projectId ? { project_id: projectId } : {};
+    return api.get('/chat/history', { params });
+  },
+};
+
 export default api;

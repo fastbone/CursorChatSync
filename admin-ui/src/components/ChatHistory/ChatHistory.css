@@ -1,0 +1,133 @@
+.chat-history {
+  padding: 20px;
+}
+
+.chat-history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.chat-history-header h1 {
+  margin: 0;
+}
+
+.filters {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.filter-select {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.loading,
+.empty-state {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+}
+
+.error-message {
+  background-color: #fee;
+  border: 1px solid #fcc;
+  color: #c33;
+  padding: 12px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.history-item {
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: white;
+  overflow: hidden;
+}
+
+.history-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  cursor: pointer;
+  background-color: #f9f9f9;
+  transition: background-color 0.2s;
+}
+
+.history-item-header:hover {
+  background-color: #f0f0f0;
+}
+
+.history-item-info {
+  flex: 1;
+}
+
+.history-item-info h3 {
+  margin: 0 0 8px 0;
+  font-size: 16px;
+  color: #333;
+}
+
+.history-item-meta {
+  display: flex;
+  gap: 16px;
+  font-size: 14px;
+  color: #666;
+}
+
+.expand-btn {
+  background: none;
+  border: none;
+  font-size: 12px;
+  color: #666;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+.history-item-content {
+  padding: 16px;
+  border-top: 1px solid #eee;
+  background-color: white;
+}
+
+.chat-data-preview,
+.chat-data-full {
+  margin-bottom: 16px;
+}
+
+.chat-data-preview pre,
+.chat-data-full pre {
+  background-color: #f5f5f5;
+  padding: 12px;
+  border-radius: 4px;
+  overflow-x: auto;
+  font-size: 12px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.history-item-details {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #eee;
+  font-size: 14px;
+  color: #666;
+}
+
+.history-item-details p {
+  margin: 4px 0;
+}

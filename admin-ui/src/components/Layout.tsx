@@ -19,6 +19,7 @@ export default function Layout({ onLogout }: LayoutProps) {
     { path: '/projects', label: 'Projects' },
     { path: '/permissions', label: 'Permissions' },
     { path: '/teams', label: 'Teams' },
+    { path: '/chat-history', label: 'Chat History' },
   ];
 
   return (

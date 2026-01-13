@@ -30,6 +30,10 @@
       {
         "command": "cursorChatSync.status",
         "title": "Show Sync Status"
+      },
+      {
+        "command": "cursorChatSync.settings",
+        "title": "Open Chat Sync Settings"
       }
     ],
     "configuration": {
@@ -49,6 +53,16 @@
           "type": "boolean",
           "default": true,
           "description": "Enable automatic syncing"
+        },
+        "cursorChatSync.enableFileWatching": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable file watching for auto-sync on state.vscdb changes"
+        },
+        "cursorChatSync.fileWatchDebounce": {
+          "type": "number",
+          "default": 5000,
+          "description": "Debounce delay in milliseconds before syncing after file change (default: 5 seconds)"
         }
       }
     }
@@ -61,10 +75,14 @@
   "devDependencies": {
     "@types/vscode": "^1.74.0",
     "@types/node": "^20.10.5",
+    "@types/better-sqlite3": "^7.6.11",
     "typescript": "^5.3.3"
   },
   "dependencies": {
-    "better-sqlite3": "^9.2.2",
+    "better-sqlite3": "^12.1.0",
     "axios": "^1.6.2"
+  },
+  "optionalDependencies": {
+    "better-sqlite3": "^12.1.0"
   }
 }

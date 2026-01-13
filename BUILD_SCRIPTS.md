@@ -223,8 +223,15 @@ npm run docker:build
 
 ### Extension Build Issues
 1. Ensure VS Code API types are installed
-2. Check `extension/tsconfig.json`
+2. Check `extension/tsconfig.json` (should have `esModuleInterop: true`)
 3. Verify `extension/package.json` has correct dependencies
+4. **better-sqlite3 compatibility**: If you get compilation errors with Node.js 24+, ensure you're using `better-sqlite3` version 11.7.0 or later
+5. If native module compilation fails, try:
+   ```bash
+   cd extension
+   rm -rf node_modules package-lock.json
+   npm install
+   ```
 
 ### Docker Issues
 1. Ensure Docker and Docker Compose are installed

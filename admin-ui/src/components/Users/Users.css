@@ -5,9 +5,36 @@
   margin-bottom: 20px;
 }
 
+.loading {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+}
+
+.error-message {
+  background-color: #fee;
+  border: 1px solid #fcc;
+  color: #c33;
+  padding: 12px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.error-message button {
+  margin-left: 12px;
+}
+
 .user-form {
   margin-bottom: 20px;
   padding: 20px;
   background-color: #f8f9fa;
   border-radius: 4px;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }

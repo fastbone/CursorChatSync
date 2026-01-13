@@ -14,6 +14,8 @@ export function activate(context: vscode.ExtensionContext) {
   const apiUrl = config.get<string>('apiUrl', 'http://localhost:3000/api');
   const autoSyncInterval = config.get<number>('autoSyncInterval', 600000); // 10 minutes
   const enableAutoSync = config.get<boolean>('enableAutoSync', true);
+  const enableFileWatching = config.get<boolean>('enableFileWatching', true);
+  const fileWatchDebounce = config.get<number>('fileWatchDebounce', 5000); // 5 seconds
 
   // Initialize sync manager
   syncManager = new SyncManager(apiUrl);
@@ -26,6 +28,11 @@ export function activate(context: vscode.ExtensionContext) {
     syncManager.startAutoSync(autoSyncInterval);
   }
 
+  // Start file watching if enabled
+  if (enableFileWatching && AuthService.isAuthenticated()) {
+    syncManager.startFileWatching(fileWatchDebounce);
+  }
+
   // Watch for configuration changes
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration((e) => {
@@ -33,11 +40,19 @@ export function activate(context: vscode.ExtensionContext) {
         const newConfig = vscode.workspace.getConfiguration('cursorChatSync');
         const newInterval = newConfig.get<number>('autoSyncInterval', 600000);
         const newEnableAutoSync = newConfig.get<boolean>('enableAutoSync', true);
+        const newEnableFileWatching = newConfig.get<boolean>('enableFileWatching', true);
+        const newFileWatchDebounce = newConfig.get<number>('fileWatchDebounce', 5000);
 
         if (syncManager) {
           syncManager.stopAutoSync();
+          syncManager.stopFileWatching();
+          
           if (newEnableAutoSync && AuthService.isAuthenticated()) {
             syncManager.startAutoSync(newInterval);
+          }
+          
+          if (newEnableFileWatching && AuthService.isAuthenticated()) {
+            syncManager.startFileWatching(newFileWatchDebounce);
           }
         }
       }
@@ -50,6 +65,7 @@ export function activate(context: vscode.ExtensionContext) {
 export function deactivate() {
   if (syncManager) {
     syncManager.stopAutoSync();
+    syncManager.dispose();
     syncManager = null;
   }
 }

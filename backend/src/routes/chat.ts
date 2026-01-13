@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import { z } from 'zod';
 import chatService from '../services/chatService';
 import projectService from '../services/projectService';
+import permissionService from '../services/permissionService';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
 
 const router = Router();
@@ -34,7 +35,15 @@ router.post('/upload', async (req: AuthRequest, res: Response) => {
       workstation_id: data.workstation_id,
     });
     
-    res.json(chatHistory);
+    // Return response with project info
+    res.json({
+      ...chatHistory,
+      project: {
+        id: project.id,
+        git_repo_url: project.git_repo_url,
+        git_repo_name: project.git_repo_name,
+      },
+    });
   } catch (error: any) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: 'Validation error', details: error.errors });
@@ -66,6 +75,33 @@ router.get('/download', async (req: AuthRequest, res: Response) => {
     res.json(chatHistory);
   } catch (error: any) {
     res.status(400).json({ error: error.message });
+  }
+});
+
+router.get('/project', async (req: AuthRequest, res: Response) => {
+  try {
+    const gitRepoUrl = req.query.git_repo_url as string;
+    const userId = req.user!.id;
+    
+    if (!gitRepoUrl) {
+      return res.status(400).json({ error: 'git_repo_url is required' });
+    }
+    
+    const project = await projectService.getProjectByRepoUrl(gitRepoUrl, userId);
+    
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+    
+    // Check permissions
+    const canSync = await permissionService.canUserSyncProject(userId, project.id);
+    
+    res.json({
+      ...project,
+      can_sync: canSync,
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
   }
 });
 

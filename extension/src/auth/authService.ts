@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 export class AuthService {
   private static readonly TOKEN_KEY = 'cursorChatSync.token';
   private static readonly USER_KEY = 'cursorChatSync.user';
+  private static readonly PROJECT_MAPPING_KEY = 'cursorChatSync.projectMappings';
 
   // Set context from extension activation
   static context: vscode.ExtensionContext | null = null;
@@ -46,5 +47,20 @@ export class AuthService {
     this.clearToken();
     this.clearUser();
     vscode.window.showInformationMessage('Logged out from Chat Sync');
+  }
+
+  static getProjectMapping(gitRepoUrl: string): number | null {
+    const mappings = this.getContext().globalState.get<Record<string, number>>(this.PROJECT_MAPPING_KEY) || {};
+    return mappings[gitRepoUrl] || null;
+  }
+
+  static setProjectMapping(gitRepoUrl: string, projectId: number): void {
+    const mappings = this.getContext().globalState.get<Record<string, number>>(this.PROJECT_MAPPING_KEY) || {};
+    mappings[gitRepoUrl] = projectId;
+    this.getContext().globalState.update(this.PROJECT_MAPPING_KEY, mappings);
+  }
+
+  static clearProjectMappings(): void {
+    this.getContext().globalState.update(this.PROJECT_MAPPING_KEY, undefined);
   }
 }

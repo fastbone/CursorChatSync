@@ -24,6 +24,24 @@ export interface ChatHistoryResponse {
   chat_data: any;
   last_synced_at: string;
   workstation_id?: string;
+  created_at?: string;
+}
+
+export interface UploadChatResponse extends ChatHistoryResponse {
+  project: {
+    id: number;
+    git_repo_url: string;
+    git_repo_name: string;
+  };
+}
+
+export interface ProjectInfo {
+  id: number;
+  git_repo_url: string;
+  git_repo_name: string;
+  owner_id: number;
+  created_at: string;
+  can_sync?: boolean;
 }
 
 export class ApiClient {
@@ -65,9 +83,23 @@ export class ApiClient {
     return response.data;
   }
 
-  async uploadChat(data: UploadChatRequest): Promise<any> {
-    const response = await this.client.post('/chat/upload', data);
+  async uploadChat(data: UploadChatRequest): Promise<UploadChatResponse> {
+    const response = await this.client.post<UploadChatResponse>('/chat/upload', data);
     return response.data;
+  }
+
+  async getProjectByRepoUrl(gitRepoUrl: string): Promise<ProjectInfo | null> {
+    try {
+      const response = await this.client.get<ProjectInfo>('/chat/project', {
+        params: { git_repo_url: gitRepoUrl },
+      });
+      return response.data;
+    } catch (error: any) {
+      if (error.response?.status === 404) {
+        return null;
+      }
+      throw error;
+    }
   }
 
   async downloadChat(projectId: number): Promise<ChatHistoryResponse | null> {

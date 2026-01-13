@@ -12,12 +12,26 @@ The system consists of three main components:
 
 ## Features
 
-- ✅ Sync chat history across multiple workstations
+### Core Functionality
+- ✅ **Full bidirectional sync** - Upload, download, and intelligent merge of chat history
+- ✅ **Automatic file watching** - Syncs when `state.vscdb` changes (with debouncing)
+- ✅ **Smart conflict resolution** - Timestamp-based merging with deduplication
+- ✅ **Project mapping persistence** - Remembers project associations across sessions
+
+### User Experience
+- ✅ **Status bar integration** - Real-time sync status with click-to-sync
+- ✅ **Settings UI** - Easy configuration with connection testing
+- ✅ **Retry logic** - Automatic retry (3 attempts) for network errors
+- ✅ **Error handling** - Clear error messages and graceful failure handling
+
+### Admin Features
+- ✅ **Chat history viewer** - Browse and filter chat history by project/user
+- ✅ **Toast notifications** - User-friendly success/error feedback
+- ✅ **Loading states** - Visual feedback during operations
 - ✅ User authentication with JWT tokens
 - ✅ Admin-controlled project sharing
 - ✅ Automatic permission requests for cross-user sync
 - ✅ Team management
-- ✅ Hybrid sync (automatic + manual)
 - ✅ Project-based chat history organization
 
 ## Prerequisites
@@ -225,6 +239,33 @@ In Cursor/VS Code settings:
 
 ## Usage
 
+### Extension Usage
+
+1. **Install the Extension**:
+   - Build the extension: `cd extension && npm run compile`
+   - Package: `vsce package` (requires `vsce`: `npm install -g @vscode/vsce`)
+   - Install the `.vsix` file in Cursor
+
+2. **Login**:
+   - Open Command Palette (Ctrl+Shift+P / Cmd+Shift+P)
+   - Run: `Cursor Chat Sync: Login`
+   - Enter your email and password
+
+3. **Sync**:
+   - **Automatic**: The extension will automatically sync when:
+     - `state.vscdb` file changes (if file watching is enabled)
+     - At configured intervals (if auto-sync is enabled)
+   - **Manual**: Click the status bar item or run `Cursor Chat Sync: Sync Chat History Now`
+
+4. **View Status**:
+   - Check the status bar (bottom right) for sync status
+   - Click it to trigger manual sync
+   - Run `Cursor Chat Sync: Show Sync Status` for detailed info
+
+5. **Configure**:
+   - Run `Cursor Chat Sync: Open Chat Sync Settings`
+   - Or edit VS Code settings directly
+
 ### Initial Setup
 
 1. **Create Admin User** (via API or directly in database):
@@ -401,24 +442,26 @@ See [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) for detailed information ab
 
 ### Current Status
 
-**Completed:**
+**Completed (Priority 1-4):**
 - ✅ Backend API with authentication
 - ✅ Database schema and migrations
 - ✅ Admin UI for user/project/permission management
-- ✅ Extension structure and basic sync (upload only)
+- ✅ **Full bidirectional sync** (upload, download, and merge)
+- ✅ **File watching for auto-sync** with debouncing
+- ✅ **Project mapping storage** (persistent git_repo_url → project_id)
+- ✅ **Smart conflict resolution** with timestamp-based merging
+- ✅ **Status bar integration** with real-time sync status
+- ✅ **Extension settings UI** with connection testing
+- ✅ **Chat history viewing** in Admin UI with filtering
+- ✅ **Improved error handling** with retry logic and toast notifications
+- ✅ **Better-sqlite3 v12.1.0** for Node.js v24 compatibility
 - ✅ Docker setup
 
-**In Progress:**
-- 🔄 Bidirectional sync (download and merge)
-- 🔄 File watching for auto-sync
-- 🔄 Project mapping storage
-
-**Planned:**
-- 📋 Conflict resolution improvements
-- 📋 Chat history viewing in admin UI
-- 📋 Real-time permission updates
-- 📋 Extension status bar integration
+**Future Enhancements (Priority 5):**
 - 📋 Unit and integration tests
+- 📋 Real-time permission updates (polling)
+- 📋 Error logging and monitoring (Sentry integration)
+- 📋 Performance monitoring
 
 ## Contributing
 

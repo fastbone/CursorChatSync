@@ -6,6 +6,8 @@ import Users from './components/Users/Users';
 import Projects from './components/Projects/Projects';
 import Permissions from './components/Permissions/Permissions';
 import Teams from './components/Teams/Teams';
+import ChatHistory from './components/ChatHistory/ChatHistory';
+import { ToastContainer } from './utils/toast';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -23,6 +25,7 @@ function App() {
 
   return (
     <BrowserRouter>
+      <ToastContainer />
       <Routes>
         <Route path="/login" element={<Login onLogin={() => setIsAuthenticated(true)} />} />
         <Route
@@ -40,6 +43,7 @@ function App() {
           <Route path="projects" element={<Projects />} />
           <Route path="permissions" element={<Permissions />} />
           <Route path="teams" element={<Teams />} />
+          <Route path="chat-history" element={<ChatHistory />} />
         </Route>
       </Routes>
     </BrowserRouter>

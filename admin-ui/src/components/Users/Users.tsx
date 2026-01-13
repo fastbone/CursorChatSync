@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { usersAPI } from '../../services/api';
+import { toast } from '../../utils/toast';
 import './Users.css';
 
 interface User {
@@ -13,6 +14,8 @@ interface User {
 export default function Users() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
@@ -26,11 +29,16 @@ export default function Users() {
   }, []);
 
   const loadUsers = async () => {
+    setLoading(true);
+    setError(null);
     try {
       const response = await usersAPI.getAll();
       setUsers(response.data);
-    } catch (error) {
-      console.error('Failed to load users:', error);
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.error || 'Failed to load users';
+      setError(errorMsg);
+      toast.error(errorMsg);
+      console.error('Failed to load users:', err);
     } finally {
       setLoading(false);
     }
@@ -38,28 +46,31 @@ export default function Users() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitting(true);
     try {
       await usersAPI.create(formData);
+      toast.success('User created successfully');
       setShowForm(false);
       setFormData({ email: '', password: '', name: '', is_admin: false });
       loadUsers();
-    } catch (error: any) {
-      alert(error.response?.data?.error || 'Failed to create user');
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.error || 'Failed to create user';
+      toast.error(errorMsg);
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const toggleAdmin = async (id: number, currentStatus: boolean) => {
     try {
       await usersAPI.updateAdmin(id, !currentStatus);
+      toast.success(`User ${!currentStatus ? 'promoted to' : 'removed from'} admin`);
       loadUsers();
-    } catch (error: any) {
-      alert(error.response?.data?.error || 'Failed to update user');
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.error || 'Failed to update user';
+      toast.error(errorMsg);
     }
   };
-
-  if (loading) {
-    return <div>Loading...</div>;
-  }
 
   return (
     <div className="container">
@@ -70,6 +81,19 @@ export default function Users() {
             {showForm ? 'Cancel' : 'Add User'}
           </button>
         </div>
+
+        {loading && (
+          <div className="loading">Loading users...</div>
+        )}
+
+        {error && !loading && (
+          <div className="error-message">
+            {error}
+            <button onClick={loadUsers} className="btn btn-secondary">
+              Retry
+            </button>
+          </div>
+        )}
 
         {showForm && (
           <form onSubmit={handleSubmit} className="user-form">
@@ -110,24 +134,32 @@ export default function Users() {
                 Admin
               </label>
             </div>
-            <button type="submit" className="btn btn-primary">
-              Create User
+            <button type="submit" className="btn btn-primary" disabled={submitting}>
+              {submitting ? 'Creating...' : 'Create User'}
             </button>
           </form>
         )}
 
-        <table>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Role</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.map((user) => (
+        {!loading && (
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.length === 0 ? (
+                <tr>
+                  <td colSpan={5} style={{ textAlign: 'center', padding: '20px' }}>
+                    No users found
+                  </td>
+                </tr>
+              ) : (
+                users.map((user) => (
               <tr key={user.id}>
                 <td>{user.id}</td>
                 <td>{user.name}</td>
@@ -147,10 +179,12 @@ export default function Users() {
                     {user.is_admin ? 'Remove Admin' : 'Make Admin'}
                   </button>
                 </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );
