@@ -56,14 +56,37 @@ else
 fi
 
 # Check for docker compose (newer) or docker-compose (older)
+# Also check if we need sudo for docker commands
+DOCKER_SUDO=""
 if [ "$DOCKER_AVAILABLE" = true ]; then
-    if docker compose version &> /dev/null; then
-        DOCKER_COMPOSE_CMD="docker compose"
-    elif command -v docker-compose &> /dev/null; then
-        DOCKER_COMPOSE_CMD="docker-compose"
+    # Check if we're running as root
+    if [ "$(id -u)" -eq 0 ]; then
+        # Running as root, no sudo needed
+        DOCKER_SUDO=""
+    elif docker info &> /dev/null; then
+        # Can run docker without sudo
+        DOCKER_SUDO=""
+    elif command -v sudo &> /dev/null; then
+        # Need sudo and it's available
+        DOCKER_SUDO="sudo "
+        print_status "Docker requires sudo. Will use 'sudo' for Docker commands."
     else
-        print_warning "docker compose is not available. Docker Compose setup will be skipped."
+        print_warning "Cannot access Docker daemon and sudo is not available."
+        print_warning "Please either:"
+        print_warning "  1. Add your user to the docker group: sudo usermod -aG docker $USER"
+        print_warning "  2. Run this script with sudo"
         DOCKER_AVAILABLE=false
+    fi
+    
+    if [ "$DOCKER_AVAILABLE" = true ]; then
+        if $DOCKER_SUDO docker compose version &> /dev/null; then
+            DOCKER_COMPOSE_CMD="$DOCKER_SUDO docker compose"
+        elif command -v docker-compose &> /dev/null && $DOCKER_SUDO docker-compose version &> /dev/null; then
+            DOCKER_COMPOSE_CMD="$DOCKER_SUDO docker-compose"
+        else
+            print_warning "docker compose is not available. Docker Compose setup will be skipped."
+            DOCKER_AVAILABLE=false
+        fi
     fi
 fi
 
