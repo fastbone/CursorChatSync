@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { chatAPI } from '../../services/api';
+import { chatAPI, chatLocksAPI } from '../../services/api';
 import { projectsAPI } from '../../services/api';
+import { extractConversations } from '../../utils/conversationExtractor';
 import './ChatHistory.css';
 
 interface ChatHistoryItem {
@@ -21,6 +22,15 @@ interface Project {
   git_repo_url: string;
 }
 
+interface LockInfo {
+  is_locked: boolean;
+  locked_by_user_id?: number;
+  locked_by_user_name?: string;
+  lock_type?: 'auto' | 'manual';
+  expires_at?: string | null;
+  created_at?: string;
+}
+
 export default function ChatHistory() {
   const [history, setHistory] = useState<ChatHistoryItem[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -28,6 +38,8 @@ export default function ChatHistory() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [lockInfoMap, setLockInfoMap] = useState<Map<string, LockInfo>>(new Map());
+  const [lockingConversation, setLockingConversation] = useState<string | null>(null);
 
   useEffect(() => {
     loadProjects();
@@ -52,11 +64,65 @@ export default function ChatHistory() {
     try {
       const response = await chatAPI.getHistory(selectedProject);
       setHistory(response.data);
+      
+      // Load lock info for all conversations
+      await loadLockInfo(response.data);
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to load chat history');
       console.error('Failed to load chat history:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadLockInfo = async (historyItems: ChatHistoryItem[]) => {
+    const newLockInfoMap = new Map<string, LockInfo>();
+    
+    for (const item of historyItems) {
+      const conversations = extractConversations(item.chat_data);
+      for (const conversationId of conversations.keys()) {
+        try {
+          const response = await chatLocksAPI.getStatus(item.project_id, conversationId);
+          const lockInfo: LockInfo = response.data;
+          newLockInfoMap.set(`${item.project_id}_${conversationId}`, lockInfo);
+        } catch (err: any) {
+          // If lock doesn't exist, that's fine
+          newLockInfoMap.set(`${item.project_id}_${conversationId}`, { is_locked: false });
+        }
+      }
+    }
+    
+    setLockInfoMap(newLockInfoMap);
+  };
+
+  const handleLock = async (projectId: number, conversationId: string) => {
+    setLockingConversation(conversationId);
+    try {
+      await chatLocksAPI.create({
+        project_id: projectId,
+        conversation_id: conversationId,
+        lock_type: 'manual',
+      });
+      await loadHistory(); // Reload to get updated lock info
+    } catch (err: any) {
+      alert(err.response?.data?.error || 'Failed to lock conversation');
+    } finally {
+      setLockingConversation(null);
+    }
+  };
+
+  const handleUnlock = async (projectId: number, conversationId: string) => {
+    setLockingConversation(conversationId);
+    try {
+      await chatLocksAPI.remove({
+        project_id: projectId,
+        conversation_id: conversationId,
+      });
+      await loadHistory(); // Reload to get updated lock info
+    } catch (err: any) {
+      alert(err.response?.data?.error || 'Failed to unlock conversation');
+    } finally {
+      setLockingConversation(null);
     }
   };
 
@@ -165,6 +231,77 @@ export default function ChatHistory() {
             </div>
             {expandedId === item.id && (
               <div className="history-item-content">
+                <div className="conversations-section">
+                  <strong>Conversations:</strong>
+                  {(() => {
+                    const conversations = extractConversations(item.chat_data);
+                    if (conversations.size === 0) {
+                      return <p className="no-conversations">No conversations found in chat data</p>;
+                    }
+                    return (
+                      <div className="conversations-list">
+                        {Array.from(conversations.entries()).map(([conversationId, conversationData]) => {
+                          const lockKey = `${item.project_id}_${conversationId}`;
+                          const lockInfo = lockInfoMap.get(lockKey) || { is_locked: false };
+                          const isLocking = lockingConversation === conversationId;
+                          
+                          return (
+                            <div key={conversationId} className="conversation-item">
+                              <div className="conversation-header">
+                                <div className="conversation-info">
+                                  <span className="conversation-id">
+                                    <strong>ID:</strong> {conversationId}
+                                  </span>
+                                  {lockInfo.is_locked && (
+                                    <span className="lock-status locked">
+                                      🔒 Locked by {lockInfo.locked_by_user_name || `User ${lockInfo.locked_by_user_id}`}
+                                      {lockInfo.expires_at && (
+                                        <span className="lock-expires">
+                                          {' '}(expires: {formatDate(lockInfo.expires_at)})
+                                        </span>
+                                      )}
+                                    </span>
+                                  )}
+                                  {!lockInfo.is_locked && (
+                                    <span className="lock-status unlocked">🔓 Unlocked</span>
+                                  )}
+                                </div>
+                                <div className="conversation-actions">
+                                  {lockInfo.is_locked ? (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleUnlock(item.project_id, conversationId);
+                                      }}
+                                      disabled={isLocking}
+                                      className="btn btn-danger btn-sm"
+                                    >
+                                      {isLocking ? 'Unlocking...' : 'Unlock'}
+                                    </button>
+                                  ) : (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleLock(item.project_id, conversationId);
+                                      }}
+                                      disabled={isLocking}
+                                      className="btn btn-primary btn-sm"
+                                    >
+                                      {isLocking ? 'Locking...' : 'Lock'}
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="conversation-preview">
+                                <pre>{JSON.stringify(conversationData, null, 2).substring(0, 200)}...</pre>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
+                </div>
                 <div className="chat-data-preview">
                   <strong>Chat Data Preview:</strong>
                   <pre>{formatChatData(item.chat_data)}</pre>

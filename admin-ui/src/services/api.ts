@@ -77,4 +77,19 @@ export const chatAPI = {
   },
 };
 
+export const chatLocksAPI = {
+  create: (data: { project_id: number; conversation_id: string; lock_type: 'auto' | 'manual'; timeout_minutes?: number }) =>
+    api.post('/chat/locks', data),
+  remove: (data: { project_id: number; conversation_id: string }) =>
+    api.delete('/chat/locks', { data }),
+  getStatus: (projectId: number, conversationId: string) =>
+    api.get(`/chat/locks/${projectId}/${encodeURIComponent(conversationId)}`),
+  extend: (data: { project_id: number; conversation_id: string; additional_minutes: number }) =>
+    api.post('/chat/locks/extend', data),
+  getAll: (projectId?: number) => {
+    const params = projectId ? { project_id: projectId } : {};
+    return api.get('/chat/locks', { params });
+  },
+};
+
 export default api;

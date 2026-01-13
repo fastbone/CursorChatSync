@@ -131,3 +131,108 @@
 .history-item-details p {
   margin: 4px 0;
 }
+
+.conversations-section {
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #eee;
+}
+
+.conversations-section strong {
+  display: block;
+  margin-bottom: 12px;
+  font-size: 16px;
+}
+
+.no-conversations {
+  color: #666;
+  font-style: italic;
+  padding: 12px;
+  background-color: #f9f9f9;
+  border-radius: 4px;
+}
+
+.conversations-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.conversation-item {
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 12px;
+  background-color: #fafafa;
+}
+
+.conversation-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.conversation-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.conversation-id {
+  font-size: 14px;
+  color: #333;
+}
+
+.lock-status {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.lock-status.locked {
+  background-color: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffc107;
+}
+
+.lock-status.unlocked {
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #28a745;
+}
+
+.lock-expires {
+  font-size: 11px;
+  opacity: 0.8;
+}
+
+.conversation-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-sm {
+  padding: 4px 12px;
+  font-size: 12px;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.conversation-preview {
+  margin-top: 8px;
+}
+
+.conversation-preview pre {
+  background-color: #f5f5f5;
+  padding: 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  max-height: 100px;
+  overflow-y: auto;
+  margin: 0;
+}
