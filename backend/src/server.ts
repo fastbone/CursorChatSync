@@ -12,7 +12,7 @@ import teamRoutes from './routes/teams';
 import { logger } from './utils/logger';
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = parseInt(process.env.PORT || '3000', 10);
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (reason: any, promise: Promise<any>) => {
