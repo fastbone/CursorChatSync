@@ -84,8 +84,10 @@ jobs:
     - name: Extract metadata for Docker images
       id: meta
       run: |
-        echo "backend_image=ghcr.io/${{ github.repository }}/backend" >> $GITHUB_OUTPUT
-        echo "admin_ui_image=ghcr.io/${{ github.repository }}/admin-ui" >> $GITHUB_OUTPUT
+        # Convert repository name to lowercase (required for Docker registry)
+        REPO_LOWER=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+        echo "backend_image=ghcr.io/${REPO_LOWER}/backend" >> $GITHUB_OUTPUT
+        echo "admin_ui_image=ghcr.io/${REPO_LOWER}/admin-ui" >> $GITHUB_OUTPUT
         # Tag with latest, release tag (if available), and commit SHA
         if [ "${{ github.ref }}" == "refs/heads/main" ] && [ "${{ github.event_name }}" == "push" ] && [ -n "${{ needs.prepare-release.outputs.release_tag }}" ]; then
           echo "tags=latest,${{ needs.prepare-release.outputs.release_tag }},${{ github.sha }}" >> $GITHUB_OUTPUT
@@ -145,7 +147,7 @@ jobs:
       run: npx @vscode/vsce package --allow-missing-repository
 
     - name: Upload extension artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: extension-vsix
         path: extension/*.vsix
@@ -166,25 +168,23 @@ jobs:
         fetch-depth: 0  # Fetch all history for tags
 
     - name: Download extension artifact
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: extension-vsix
         path: ./release-artifacts/
 
-    - name: Get release tag from docker-build job
+    - name: Set release tag
       id: tag
       run: |
-        # Get the release tag that was generated in docker-build job
-        # We'll regenerate it here to ensure consistency
-        TIMESTAMP=$(date -u +"%Y%m%d-%H%M%S")
-        RELEASE_TAG="release-${TIMESTAMP}"
-        echo "tag=${RELEASE_TAG}" >> $GITHUB_OUTPUT
-        echo "Release tag: ${RELEASE_TAG}"
+        echo "tag=${{ needs.prepare-release.outputs.release_tag }}" >> $GITHUB_OUTPUT
+        echo "Using release tag: ${{ needs.prepare-release.outputs.release_tag }}"
 
-    - name: Get repository name
+    - name: Get repository name (lowercase for Docker)
       id: repo
       run: |
-        echo "repo=${{ github.repository }}" >> $GITHUB_OUTPUT
+        # Convert repository name to lowercase (required for Docker registry)
+        REPO_LOWER=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+        echo "repo=${REPO_LOWER}" >> $GITHUB_OUTPUT
         echo "owner=${{ github.repository_owner }}" >> $GITHUB_OUTPUT
 
     - name: Create production docker-compose file

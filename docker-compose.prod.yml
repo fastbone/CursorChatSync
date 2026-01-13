@@ -16,8 +16,8 @@
 # Usage:
 #   docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
 #
-# Note: Replace 'OWNER/REPO' with your GitHub repository path
-# Example: ghcr.io/yourusername/cursorchatsync/backend:latest
+# Note: Replace 'OWNER/REPO' with your GitHub repository path (must be lowercase)
+# Example: ghcr.io/fastbone/cursorchatsync/backend:latest
 
 services:
   postgres:
