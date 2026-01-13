@@ -1,6 +1,7 @@
 {
   "name": "cursor-chat-sync",
   "version": "1.0.0",
+  "license": "Apache-2.0",
   "description": "Cursor Chat Sync - Complete system",
   "private": true,
   "scripts": {

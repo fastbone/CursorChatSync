@@ -270,6 +270,10 @@ jobs:
 
     - name: Create Git tag
       run: |
+        if [ -z "${{ steps.tag.outputs.tag }}" ]; then
+          echo "Error: Release tag is empty. Cannot create git tag."
+          exit 1
+        fi
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
         git tag -a "${{ steps.tag.outputs.tag }}" -m "Automated release: ${{ steps.tag.outputs.tag }}"

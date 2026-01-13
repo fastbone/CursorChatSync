@@ -544,7 +544,7 @@ If you encounter build errors when installing `better-sqlite3` with Node.js 24:
 
 ## License
 
-[Your License Here]
+Licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) file for details.
 
 ## Implementation Status
 
