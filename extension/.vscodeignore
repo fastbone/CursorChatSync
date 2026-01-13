@@ -8,6 +8,12 @@ vsc-extension-quickstart.md
 **/*.map
 **/*.ts
 node_modules/**
+!node_modules/better-sqlite3/**
+out/api/**
+out/auth/**
+out/commands/**
+out/sync/**
+out/utils/**
 .git/**
 *.md
 !README.md

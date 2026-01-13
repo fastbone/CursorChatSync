@@ -5,7 +5,7 @@ import { logger } from '../utils/logger';
 
 export function registerCommands(
   context: vscode.ExtensionContext,
-  syncManager: SyncManager
+  syncManager: SyncManager | null
 ) {
   // Login command
   const loginCommand = vscode.commands.registerCommand('cursorChatSync.login', async () => {
@@ -28,32 +28,77 @@ export function registerCommands(
       return;
     }
 
-    await syncManager.login(email, password);
+    // If syncManager is null, create a temporary one for login
+    if (syncManager) {
+      await syncManager.login(email, password);
+    } else {
+      // Create a temporary API client for login
+      const config = vscode.workspace.getConfiguration('cursorChatSync');
+      const apiUrl = config.get<string>('apiUrl', 'http://localhost:3000/api');
+      const { ApiClient } = require('../api/apiClient');
+      const apiClient = new ApiClient(apiUrl);
+      
+      try {
+        const response = await apiClient.login(email, password);
+        AuthService.setToken(response.token);
+        AuthService.setUser(response.user);
+        vscode.window.showInformationMessage('Successfully logged in to Chat Sync');
+        
+        // Try to recreate sync manager now that we're authenticated
+        try {
+          const { SyncManager } = require('../sync/syncManager');
+          const newSyncManager = new SyncManager(apiUrl);
+          // Note: We can't replace the global syncManager here, but at least login worked
+        } catch (error) {
+          // Ignore - sync manager creation failed but login succeeded
+        }
+      } catch (error: any) {
+        vscode.window.showErrorMessage(`Login failed: ${error.message}`);
+      }
+    }
   });
 
   // Logout command
   const logoutCommand = vscode.commands.registerCommand('cursorChatSync.logout', () => {
-    syncManager.logout();
+    if (syncManager) {
+      syncManager.logout();
+    } else {
+      AuthService.logout();
+    }
   });
 
   // Sync now command
   const syncNowCommand = vscode.commands.registerCommand('cursorChatSync.syncNow', async () => {
+    if (!syncManager) {
+      vscode.window.showErrorMessage('Sync manager not initialized. Please reload the window.');
+      return;
+    }
     await syncManager.syncNow();
   });
 
   // Status command
   const statusCommand = vscode.commands.registerCommand('cursorChatSync.status', () => {
-    const status = syncManager.getStatus();
     const user = AuthService.getUser();
+    const isAuthenticated = AuthService.isAuthenticated();
     
-    const message = [
-      `Status: ${status.isAuthenticated ? 'Authenticated' : 'Not authenticated'}`,
-      user ? `User: ${user.name} (${user.email})` : 'User: Not logged in',
-      status.lastSyncTime
-        ? `Last sync: ${status.lastSyncTime.toLocaleString()}`
-        : 'Last sync: Never',
-      `Syncing: ${status.isSyncing ? 'Yes' : 'No'}`,
-    ].join('\n');
+    let message: string;
+    if (syncManager) {
+      const status = syncManager.getStatus();
+      message = [
+        `Status: ${status.isAuthenticated ? 'Authenticated' : 'Not authenticated'}`,
+        user ? `User: ${user.name} (${user.email})` : 'User: Not logged in',
+        status.lastSyncTime
+          ? `Last sync: ${status.lastSyncTime.toLocaleString()}`
+          : 'Last sync: Never',
+        `Syncing: ${status.isSyncing ? 'Yes' : 'No'}`,
+      ].join('\n');
+    } else {
+      message = [
+        `Status: ${isAuthenticated ? 'Authenticated' : 'Not authenticated'}`,
+        user ? `User: ${user.name} (${user.email})` : 'User: Not logged in',
+        'Sync Manager: Not initialized',
+      ].join('\n');
+    }
 
     vscode.window.showInformationMessage(message);
   });
