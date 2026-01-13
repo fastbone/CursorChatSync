@@ -1,0 +1,70 @@
+{
+  "name": "cursor-chat-sync",
+  "displayName": "Cursor Chat Sync",
+  "description": "Sync chat history across workstations with team collaboration",
+  "version": "1.0.0",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "cursorChatSync.login",
+        "title": "Login to Chat Sync"
+      },
+      {
+        "command": "cursorChatSync.logout",
+        "title": "Logout from Chat Sync"
+      },
+      {
+        "command": "cursorChatSync.syncNow",
+        "title": "Sync Chat History Now"
+      },
+      {
+        "command": "cursorChatSync.status",
+        "title": "Show Sync Status"
+      }
+    ],
+    "configuration": {
+      "title": "Cursor Chat Sync",
+      "properties": {
+        "cursorChatSync.apiUrl": {
+          "type": "string",
+          "default": "http://localhost:3000/api",
+          "description": "Backend API URL"
+        },
+        "cursorChatSync.autoSyncInterval": {
+          "type": "number",
+          "default": 600000,
+          "description": "Auto-sync interval in milliseconds (default: 10 minutes)"
+        },
+        "cursorChatSync.enableAutoSync": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable automatic syncing"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.74.0",
+    "@types/node": "^20.10.5",
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "better-sqlite3": "^9.2.2",
+    "axios": "^1.6.2"
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "name": "cursor-chat-sync",
+  "version": "1.0.0",
+  "description": "Cursor Chat Sync - Complete system",
+  "private": true,
+  "scripts": {
+    "install:all": "npm run install:backend && npm run install:admin && npm run install:extension",
+    "install:backend": "cd backend && npm install",
+    "install:admin": "cd admin-ui && npm install",
+    "install:extension": "cd extension && npm install",
+    "build:all": "npm run build:backend && npm run build:admin && npm run build:extension",
+    "build:backend": "cd backend && npm run build",
+    "build:admin": "cd admin-ui && npm run build",
+    "build:extension": "cd extension && npm run compile",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:admin": "cd admin-ui && npm run dev",
+    "dev:all": "concurrently \"npm run dev:backend\" \"npm run dev:admin\"",
+    "test:backend": "cd backend && npm test",
+    "test:admin": "cd admin-ui && npm test",
+    "test:all": "npm run test:backend && npm run test:admin",
+    "lint:backend": "cd backend && npm run lint",
+    "lint:admin": "cd admin-ui && npm run lint",
+    "lint:extension": "cd extension && npm run lint",
+    "lint:all": "npm run lint:backend && npm run lint:admin && npm run lint:extension",
+    "clean:all": "npm run clean:backend && npm run clean:admin && npm run clean:extension",
+    "clean:backend": "cd backend && rm -rf dist node_modules",
+    "clean:admin": "cd admin-ui && rm -rf dist node_modules",
+    "clean:extension": "cd extension && rm -rf out node_modules",
+    "migrate": "cd backend && npm run migrate",
+    "docker:build": "docker-compose build",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f",
+    "docker:restart": "docker-compose restart",
+    "setup": "npm run install:all && npm run migrate",
+    "package:extension": "cd extension && vsce package"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=9.0.0"
+  }
+}
