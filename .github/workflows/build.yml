@@ -134,18 +134,15 @@ jobs:
 
     - name: Install dependencies
       working-directory: ./extension
-      run: npm ci
+      run: npm install
 
     - name: Build extension
       working-directory: ./extension
       run: npm run compile
 
-    - name: Install vsce
-      run: npm install -g @vscode/vsce
-
     - name: Package extension
       working-directory: ./extension
-      run: npm run package
+      run: npx @vscode/vsce package --allow-missing-repository
 
     - name: Upload extension artifact
       uses: actions/upload-artifact@v3
