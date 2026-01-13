@@ -95,7 +95,29 @@ export function activate(context: vscode.ExtensionContext) {
     })
   );
 
-  vscode.window.showInformationMessage('Cursor Chat Sync extension activated');
+  // Check authentication status and prompt if needed
+  if (!AuthService.isAuthenticated()) {
+    // Show welcome message with options
+    setTimeout(() => {
+      vscode.window.showInformationMessage(
+        'Cursor Chat Sync: Please login to start syncing',
+        'Login',
+        'Quick Setup',
+        'Later'
+      ).then((action) => {
+        if (action === 'Login') {
+          vscode.commands.executeCommand('cursorChatSync.login');
+        } else if (action === 'Quick Setup') {
+          vscode.commands.executeCommand('cursorChatSync.quickSetup');
+        }
+      });
+    }, 2000); // Delay to let extension fully activate
+  } else {
+    const user = AuthService.getUser();
+    vscode.window.showInformationMessage(
+      `Cursor Chat Sync: Logged in as ${user?.name || user?.email || 'User'}`
+    );
+  }
 }
 
 export function deactivate() {

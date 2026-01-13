@@ -46,13 +46,13 @@ services:
     build:
       context: ./admin-ui
       dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=/api
     container_name: cursor-chat-sync-admin-ui
     ports:
       - "80:80"
     depends_on:
       - backend
-    environment:
-      - VITE_API_URL=http://localhost:3000/api
 
 volumes:
   postgres_data:

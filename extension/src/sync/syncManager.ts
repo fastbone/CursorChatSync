@@ -50,8 +50,6 @@ export class SyncManager {
       vscode.StatusBarAlignment.Right,
       100
     );
-    this.statusBarItem.command = 'cursorChatSync.syncNow';
-    this.statusBarItem.tooltip = 'Click to sync chat history';
     this.updateStatusBar();
     this.statusBarItem.show();
   }
@@ -63,16 +61,24 @@ export class SyncManager {
     
     if (this.isSyncing) {
       this.statusBarItem.text = '$(sync~spin) Syncing...';
+      this.statusBarItem.command = 'cursorChatSync.syncNow';
+      this.statusBarItem.tooltip = 'Syncing chat history...';
       this.statusBarItem.backgroundColor = undefined;
     } else if (!isAuthenticated) {
       this.statusBarItem.text = '$(sync-ignored) Chat Sync: Not logged in';
+      this.statusBarItem.command = 'cursorChatSync.login';
+      this.statusBarItem.tooltip = 'Click to login to Chat Sync';
       this.statusBarItem.backgroundColor = undefined;
     } else if (this.lastSyncTime) {
       const timeAgo = this.getTimeAgo(this.lastSyncTime);
       this.statusBarItem.text = `$(check) Chat Sync: ${timeAgo}`;
+      this.statusBarItem.command = 'cursorChatSync.syncNow';
+      this.statusBarItem.tooltip = 'Click to sync chat history';
       this.statusBarItem.backgroundColor = undefined;
     } else {
       this.statusBarItem.text = '$(sync) Chat Sync: Ready';
+      this.statusBarItem.command = 'cursorChatSync.syncNow';
+      this.statusBarItem.tooltip = 'Click to sync chat history';
       this.statusBarItem.backgroundColor = undefined;
     }
   }

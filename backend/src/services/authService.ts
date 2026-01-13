@@ -1,4 +1,4 @@
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import jwt, { SignOptions } from 'jsonwebtoken';
 import type { StringValue } from 'ms';
 import pool from '../db/connection';
@@ -24,7 +24,7 @@ export class AuthService {
     }
     
     // Hash password
-    const password_hash = await bcrypt.hash(password, 10);
+    const password_hash = bcrypt.hashSync(password, 10);
     
     // Create user
     const result = await pool.query(
