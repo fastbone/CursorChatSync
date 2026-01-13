@@ -5,22 +5,28 @@ import { ApiClient } from '../api/apiClient';
 import { AuthService } from '../auth/authService';
 import { DbReader } from './dbReader';
 import { DbWriter } from './dbWriter';
+import { ChatLockService } from './chatLockService';
+import { filterExcludedConversations } from '../utils/conversationIdExtractor';
+import { logger } from '../utils/logger';
 
 export class SyncManager {
   private apiClient: ApiClient;
   private dbReader: DbReader;
   private dbWriter: DbWriter;
+  private chatLockService: ChatLockService;
   private syncInterval: NodeJS.Timeout | null = null;
   private isSyncing: boolean = false;
   private lastSyncTime: Date | null = null;
   private statusBarItem: vscode.StatusBarItem | null = null;
   private fileWatcher: vscode.FileSystemWatcher | null = null;
   private debounceTimer: NodeJS.Timeout | null = null;
+  private currentLockedConversations: string[] = [];
 
   constructor(apiUrl: string) {
     this.apiClient = new ApiClient(apiUrl);
     this.dbReader = new DbReader();
     this.dbWriter = new DbWriter();
+    this.chatLockService = new ChatLockService(this.apiClient);
 
     // Set token if available
     const token = AuthService.getToken();
@@ -167,6 +173,7 @@ export class SyncManager {
   dispose(): void {
     this.stopAutoSync();
     this.stopFileWatching();
+    this.chatLockService.dispose();
     if (this.statusBarItem) {
       this.statusBarItem.dispose();
       this.statusBarItem = null;
@@ -175,13 +182,16 @@ export class SyncManager {
 
   async login(email: string, password: string): Promise<boolean> {
     try {
+      logger.info('Login attempt', { email });
       const response = await this.apiClient.login(email, password);
       AuthService.setToken(response.token);
       AuthService.setUser(response.user);
       this.apiClient.setToken(response.token);
+      logger.logAuth('login', true);
       vscode.window.showInformationMessage('Successfully logged in to Chat Sync');
       return true;
     } catch (error: any) {
+      logger.logAuth('login', false, error.message);
       vscode.window.showErrorMessage(`Login failed: ${error.message}`);
       return false;
     }
@@ -227,7 +237,7 @@ export class SyncManager {
         throw new Error('state.vscdb not found. Make sure Cursor is installed.');
       }
 
-      const localChatData = this.dbReader.readChatHistory();
+      let localChatData = this.dbReader.readChatHistory();
 
       // Get or find project ID
       let projectId = AuthService.getProjectMapping(gitRepoUrl);
@@ -239,6 +249,45 @@ export class SyncManager {
           projectId = project.id;
           AuthService.setProjectMapping(gitRepoUrl, projectId);
         }
+      }
+
+      if (!projectId) {
+        throw new Error('Project not found. Please sync first.');
+      }
+
+      // Sync exclusions from backend
+      await this.chatLockService.syncExclusions(projectId);
+
+      // Filter excluded conversations before sync
+      const excludedIds = this.chatLockService.getExclusions(projectId);
+      if (excludedIds.size > 0) {
+        localChatData = filterExcludedConversations(localChatData, excludedIds);
+      }
+
+      // Check for locks and show notification if any conversations are locked
+      const config = vscode.workspace.getConfiguration('cursorChatSync');
+      const lockNotificationEnabled = config.get<boolean>('lockNotificationEnabled', true);
+      const { lockedIds, lockInfo } = await this.chatLockService.checkLocks(projectId, localChatData);
+      
+      if (lockedIds.length > 0 && lockNotificationEnabled) {
+        const lockedBy = Array.from(lockInfo.values())
+          .map((info) => info.locked_by_user_name || 'Unknown')
+          .join(', ');
+        vscode.window.showWarningMessage(
+          `Some chats are locked by ${lockedBy}. Read-only sync only.`
+        );
+      }
+
+      // Auto-lock conversations if enabled
+      const enableAutoLocking = config.get<boolean>('enableAutoLocking', true);
+      const autoLockTimeout = config.get<number>('autoLockTimeout', 900000) / 1000 / 60; // Convert ms to minutes
+      
+      if (enableAutoLocking) {
+        this.currentLockedConversations = await this.chatLockService.autoLockConversations(
+          projectId,
+          localChatData,
+          autoLockTimeout
+        );
       }
 
       // Upload to server
@@ -256,7 +305,18 @@ export class SyncManager {
           projectId = uploadResponse.project.id;
           AuthService.setProjectMapping(gitRepoUrl, projectId);
         }
+
+        // Show warning if some conversations were locked
+        if (uploadResponse.locked_conversations && uploadResponse.locked_conversations.length > 0) {
+          vscode.window.showWarningMessage(uploadResponse.lock_warning || 'Some conversations were locked');
+        }
       } catch (error: any) {
+        // Auto-unlock on error
+        if (enableAutoLocking && this.currentLockedConversations.length > 0) {
+          await this.chatLockService.autoUnlockConversations(projectId, this.currentLockedConversations);
+          this.currentLockedConversations = [];
+        }
+
         if (error.response?.data?.requires_approval) {
           vscode.window.showWarningMessage(
             'Permission required. Request sent to admin for approval.'
@@ -271,6 +331,7 @@ export class SyncManager {
         try {
           const remoteChat = await this.apiClient.downloadChat(projectId);
           if (remoteChat && remoteChat.chat_data) {
+            // Remote chat data is already filtered for exclusions by backend
             // Merge remote and local chat data
             const merged = this.dbWriter.mergeChatHistory(remoteChat.chat_data, localChatData);
             
@@ -295,8 +356,15 @@ export class SyncManager {
         }
       }
 
+      // Auto-unlock conversations when sync completes successfully
+      if (enableAutoLocking && this.currentLockedConversations.length > 0) {
+        await this.chatLockService.autoUnlockConversations(projectId, this.currentLockedConversations);
+        this.currentLockedConversations = [];
+      }
+
       this.lastSyncTime = new Date();
       this.updateStatusBar();
+      logger.logSync('completed', true, { gitRepoUrl, projectId });
       vscode.window.showInformationMessage('Chat history synced successfully');
     } catch (error: any) {
       // Retry logic for network errors
@@ -334,6 +402,7 @@ export class SyncManager {
       const errorMessage = retryCount >= maxRetries 
         ? `Sync failed after ${maxRetries} attempts: ${error.message}`
         : `Sync failed: ${error.message}`;
+      logger.logSync('failed', false, { retryCount }, error);
       vscode.window.showErrorMessage(errorMessage);
     } finally {
       this.isSyncing = false;

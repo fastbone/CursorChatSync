@@ -1,7 +1,10 @@
 import * as vscode from 'vscode';
 import { SyncManager } from './sync/syncManager';
 import { AuthService } from './auth/authService';
+import { ApiClient } from './api/apiClient';
 import { registerCommands } from './commands/syncCommands';
+import { registerChatLockCommands } from './commands/chatLockCommands';
+import { ChatLockService } from './sync/chatLockService';
 
 let syncManager: SyncManager | null = null;
 
@@ -20,8 +23,18 @@ export function activate(context: vscode.ExtensionContext) {
   // Initialize sync manager
   syncManager = new SyncManager(apiUrl);
 
+  // Create separate ApiClient instance for commands (shares same base URL)
+  // This allows commands to work independently while syncManager manages its own instance
+  const apiClientForCommands = new ApiClient(apiUrl);
+  const token = AuthService.getToken();
+  if (token) {
+    apiClientForCommands.setToken(token);
+  }
+  const chatLockService = new ChatLockService(apiClientForCommands);
+
   // Register commands
   registerCommands(context, syncManager);
+  registerChatLockCommands(context, chatLockService, apiClientForCommands);
 
   // Start auto-sync if enabled
   if (enableAutoSync && AuthService.isAuthenticated()) {

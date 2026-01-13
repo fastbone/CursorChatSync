@@ -2,6 +2,7 @@ import bcrypt from 'bcrypt';
 import jwt, { SignOptions } from 'jsonwebtoken';
 import pool from '../db/connection';
 import { User, CreateUserInput, UserResponse } from '../models/User';
+import { logger } from '../utils/logger';
 
 const JWT_SECRET: string = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 const JWT_EXPIRES_IN: string = process.env.JWT_EXPIRES_IN || '7d';
@@ -17,6 +18,7 @@ export class AuthService {
     );
     
     if (existingUser.rows.length > 0) {
+      logger.logAuth('register', undefined, false, 'Email already exists');
       throw new Error('User with this email already exists');
     }
     
@@ -48,6 +50,7 @@ export class AuthService {
     );
     
     if (result.rows.length === 0) {
+      logger.logAuth('login', undefined, false, 'User not found');
       throw new Error('Invalid email or password');
     }
     
@@ -55,8 +58,11 @@ export class AuthService {
     const isValid = await bcrypt.compare(password, user.password_hash);
     
     if (!isValid) {
+      logger.logAuth('login', user.id, false, 'Invalid password');
       throw new Error('Invalid email or password');
     }
+    
+    logger.logAuth('login', user.id, true);
     
     const token = jwt.sign(
       { id: user.id, email: user.email, is_admin: user.is_admin },

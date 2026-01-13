@@ -1,6 +1,7 @@
 import pool from '../db/connection';
 import { Permission, CreatePermissionInput, PermissionResponse } from '../models/Permission';
 import projectService from './projectService';
+import { logger } from '../utils/logger';
 
 export class PermissionService {
   async canUserSyncProject(userId: number, projectId: number): Promise<boolean> {
@@ -57,10 +58,13 @@ export class PermissionService {
     );
     
     if (result.rows.length === 0) {
+      logger.error('Permission not found for approval', undefined, { permissionId, approverId });
       throw new Error('Permission not found');
     }
     
-    return this.mapToPermission(result.rows[0]);
+    const permission = this.mapToPermission(result.rows[0]);
+    logger.logPermission('approved', permissionId, approverId, permission.project_id);
+    return permission;
   }
   
   async rejectPermission(permissionId: number, approverId: number): Promise<Permission> {
@@ -73,10 +77,13 @@ export class PermissionService {
     );
     
     if (result.rows.length === 0) {
+      logger.error('Permission not found for rejection', undefined, { permissionId, approverId });
       throw new Error('Permission not found');
     }
     
-    return this.mapToPermission(result.rows[0]);
+    const permission = this.mapToPermission(result.rows[0]);
+    logger.logPermission('rejected', permissionId, approverId, permission.project_id);
+    return permission;
   }
   
   async getPendingPermissions(): Promise<PermissionResponse[]> {

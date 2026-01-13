@@ -33,6 +33,8 @@ export interface UploadChatResponse extends ChatHistoryResponse {
     git_repo_url: string;
     git_repo_name: string;
   };
+  locked_conversations?: string[];
+  lock_warning?: string;
 }
 
 export interface ProjectInfo {
@@ -42,6 +44,39 @@ export interface ProjectInfo {
   owner_id: number;
   created_at: string;
   can_sync?: boolean;
+}
+
+export interface CreateLockRequest {
+  project_id: number;
+  conversation_id: string;
+  lock_type: 'auto' | 'manual';
+  timeout_minutes?: number;
+}
+
+export interface LockInfo {
+  is_locked: boolean;
+  locked_by_user_id?: number;
+  locked_by_user_name?: string;
+  lock_type?: 'auto' | 'manual';
+  expires_at?: string | null;
+  created_at?: string;
+}
+
+export interface RemoveLockRequest {
+  project_id: number;
+  conversation_id: string;
+}
+
+export interface ExclusionRequest {
+  project_id: number;
+  conversation_id: string;
+}
+
+export interface ExclusionResponse {
+  id: number;
+  project_id: number;
+  conversation_id: string;
+  created_at: string;
 }
 
 export class ApiClient {
@@ -119,6 +154,54 @@ export class ApiClient {
   async getChatHistory(projectId?: number): Promise<ChatHistoryResponse[]> {
     const params = projectId ? { project_id: projectId } : {};
     const response = await this.client.get<ChatHistoryResponse[]>('/chat/history', {
+      params,
+    });
+    return response.data;
+  }
+
+  // Lock methods
+  async createLock(data: CreateLockRequest): Promise<any> {
+    const response = await this.client.post('/chat/locks', data);
+    return response.data;
+  }
+
+  async removeLock(data: RemoveLockRequest): Promise<void> {
+    await this.client.delete('/chat/locks', { data });
+  }
+
+  async getLockStatus(projectId: number, conversationId: string): Promise<LockInfo> {
+    const response = await this.client.get<LockInfo>(
+      `/chat/locks/${projectId}/${encodeURIComponent(conversationId)}`
+    );
+    return response.data;
+  }
+
+  async extendLock(
+    projectId: number,
+    conversationId: string,
+    additionalMinutes: number
+  ): Promise<any> {
+    const response = await this.client.post('/chat/locks/extend', {
+      project_id: projectId,
+      conversation_id: conversationId,
+      additional_minutes: additionalMinutes,
+    });
+    return response.data;
+  }
+
+  // Exclusion methods
+  async excludeConversation(data: ExclusionRequest): Promise<ExclusionResponse> {
+    const response = await this.client.post<ExclusionResponse>('/chat/exclusions', data);
+    return response.data;
+  }
+
+  async includeConversation(data: ExclusionRequest): Promise<void> {
+    await this.client.delete('/chat/exclusions', { data });
+  }
+
+  async getExclusions(projectId?: number): Promise<ExclusionResponse[]> {
+    const params = projectId ? { project_id: projectId } : {};
+    const response = await this.client.get<ExclusionResponse[]>('/chat/exclusions', {
       params,
     });
     return response.data;

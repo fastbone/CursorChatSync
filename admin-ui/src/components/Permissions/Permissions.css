@@ -1,1 +1,10 @@
-/* Additional styles if needed */
+.loading,
+.empty-state {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+}
+
+.empty-state {
+  margin-top: 20px;
+}

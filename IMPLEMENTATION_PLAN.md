@@ -12,6 +12,8 @@ This plan outlines the remaining features and improvements needed to complete th
 **Priority 4 (UI/UX)**: ✅ 100% Complete  
 **Priority 5 (Testing/Quality)**: ⏳ Pending (Future work)
 
+**See [REMAINING_TASKS.md](REMAINING_TASKS.md) for detailed list of remaining tasks.**
+
 ## Priority 1: Critical Missing Features
 
 ### 1. Complete Bidirectional Sync in Extension
@@ -143,23 +145,23 @@ watcher.onDidChange(() => {
 - [x] Include permission status (via project lookup)
 
 ### 11. Add Chat History Viewing in Admin UI
-**Status**: Missing
+**Status**: ✅ COMPLETED
 **Files**: `admin-ui/src/components/ChatHistory/`
 
 **Tasks**:
-- [ ] Create ChatHistory component
-- [ ] Add route for viewing chat history
-- [ ] Display chat data in readable format
-- [ ] Add filtering by project/user
+- [x] Create ChatHistory component
+- [x] Add route for viewing chat history
+- [x] Display chat data in readable format
+- [x] Add filtering by project/user
 
 ### 12. Real-time Permission Updates
-**Status**: Missing
+**Status**: ✅ COMPLETED
 **Files**: `admin-ui/src/components/Permissions/`
 
 **Tasks**:
-- [ ] Poll for permission status updates
-- [ ] Show notifications for new requests
-- [ ] Auto-refresh after approval/rejection
+- [x] Poll for permission status updates
+- [x] Show notifications for new requests
+- [x] Auto-refresh after approval/rejection
 
 ## Priority 4: UI/UX Improvements
 
@@ -184,14 +186,14 @@ watcher.onDidChange(() => {
 - [x] Click to trigger sync
 
 ### 15. Extension Settings UI
-**Status**: Missing
+**Status**: ✅ COMPLETED
 **Files**: `extension/src/commands/syncCommands.ts`
 
 **Tasks**:
-- [ ] Add settings command
-- [ ] Show current configuration
-- [ ] Allow changing API URL
-- [ ] Test connection button
+- [x] Add settings command
+- [x] Show current configuration
+- [x] Allow changing API URL
+- [x] Test connection button
 
 ## Priority 5: Testing and Quality
 
@@ -214,12 +216,13 @@ watcher.onDidChange(() => {
 - [ ] Multi-user scenarios
 
 ### 18. Error Logging and Monitoring
-**Status**: Missing
+**Status**: ✅ COMPLETED
 
 **Tasks**:
-- [ ] Add structured logging
-- [ ] Error tracking (Sentry or similar)
-- [ ] Performance monitoring
+- [x] Add structured logging
+- [x] Error tracking (separate error logs)
+- [x] Performance monitoring (request timing)
+- [x] Extension logging (VS Code output channel + file logs)
 
 ## Implementation Order
 

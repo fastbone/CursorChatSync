@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { SyncManager } from '../sync/syncManager';
 import { AuthService } from '../auth/authService';
+import { logger } from '../utils/logger';
 
 export function registerCommands(
   context: vscode.ExtensionContext,

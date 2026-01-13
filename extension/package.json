@@ -34,6 +34,26 @@
       {
         "command": "cursorChatSync.settings",
         "title": "Open Chat Sync Settings"
+      },
+      {
+        "command": "cursorChatSync.lockChat",
+        "title": "Lock Chat"
+      },
+      {
+        "command": "cursorChatSync.unlockChat",
+        "title": "Unlock Chat"
+      },
+      {
+        "command": "cursorChatSync.excludeChat",
+        "title": "Exclude Chat from Sync"
+      },
+      {
+        "command": "cursorChatSync.includeChat",
+        "title": "Include Chat in Sync"
+      },
+      {
+        "command": "cursorChatSync.showLockStatus",
+        "title": "Show Lock Status"
       }
     ],
     "configuration": {
@@ -63,6 +83,21 @@
           "type": "number",
           "default": 5000,
           "description": "Debounce delay in milliseconds before syncing after file change (default: 5 seconds)"
+        },
+        "cursorChatSync.autoLockTimeout": {
+          "type": "number",
+          "default": 900000,
+          "description": "Auto-lock timeout in milliseconds (default: 15 minutes)"
+        },
+        "cursorChatSync.enableAutoLocking": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable automatic locking of conversations during sync"
+        },
+        "cursorChatSync.lockNotificationEnabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show notifications when chats are locked by other users"
         }
       }
     }
