@@ -44,22 +44,19 @@ jobs:
   prepare-release:
     runs-on: ubuntu-latest
     needs: build
+    # Only generate release tag on pushes to main branch
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && success()
     outputs:
       release_tag: ${{ steps.tag.outputs.tag }}
 
     steps:
-    - name: Generate release tag (only on main branch)
+    - name: Generate release tag
       id: tag
       run: |
-        if [ "${{ github.ref }}" == "refs/heads/main" ] && [ "${{ github.event_name }}" == "push" ]; then
-          TIMESTAMP=$(date -u +"%Y%m%d-%H%M%S")
-          RELEASE_TAG="release-${TIMESTAMP}"
-          echo "tag=${RELEASE_TAG}" >> $GITHUB_OUTPUT
-          echo "Release tag: ${RELEASE_TAG}"
-        else
-          echo "tag=" >> $GITHUB_OUTPUT
-          echo "Not a main branch push, skipping release tag"
-        fi
+        TIMESTAMP=$(date -u +"%Y%m%d-%H%M%S")
+        RELEASE_TAG="release-${TIMESTAMP}"
+        echo "tag=${RELEASE_TAG}" >> $GITHUB_OUTPUT
+        echo "Release tag: ${RELEASE_TAG}"
 
   docker-build:
     runs-on: ubuntu-latest
@@ -90,15 +87,21 @@ jobs:
         
         # Build tags for backend (comma-separated for docker/build-push-action)
         BACKEND_TAGS="ghcr.io/${REPO_LOWER}/backend:latest,ghcr.io/${REPO_LOWER}/backend:${{ github.sha }}"
-        if [ "${{ github.ref }}" == "refs/heads/main" ] && [ "${{ github.event_name }}" == "push" ] && [ -n "${{ needs.prepare-release.outputs.release_tag }}" ]; then
-          BACKEND_TAGS="${BACKEND_TAGS},ghcr.io/${REPO_LOWER}/backend:${{ needs.prepare-release.outputs.release_tag }}"
+        if [ "${{ github.ref }}" == "refs/heads/main" ] && [ "${{ github.event_name }}" == "push" ]; then
+          # Try to get release tag from prepare-release job if it ran
+          if [ -n "${{ needs.prepare-release.outputs.release_tag }}" ]; then
+            BACKEND_TAGS="${BACKEND_TAGS},ghcr.io/${REPO_LOWER}/backend:${{ needs.prepare-release.outputs.release_tag }}"
+          fi
         fi
         echo "backend_tags=${BACKEND_TAGS}" >> $GITHUB_OUTPUT
         
         # Build tags for admin-ui
         ADMIN_UI_TAGS="ghcr.io/${REPO_LOWER}/admin-ui:latest,ghcr.io/${REPO_LOWER}/admin-ui:${{ github.sha }}"
-        if [ "${{ github.ref }}" == "refs/heads/main" ] && [ "${{ github.event_name }}" == "push" ] && [ -n "${{ needs.prepare-release.outputs.release_tag }}" ]; then
-          ADMIN_UI_TAGS="${ADMIN_UI_TAGS},ghcr.io/${REPO_LOWER}/admin-ui:${{ needs.prepare-release.outputs.release_tag }}"
+        if [ "${{ github.ref }}" == "refs/heads/main" ] && [ "${{ github.event_name }}" == "push" ]; then
+          # Try to get release tag from prepare-release job if it ran
+          if [ -n "${{ needs.prepare-release.outputs.release_tag }}" ]; then
+            ADMIN_UI_TAGS="${ADMIN_UI_TAGS},ghcr.io/${REPO_LOWER}/admin-ui:${{ needs.prepare-release.outputs.release_tag }}"
+          fi
         fi
         echo "admin_ui_tags=${ADMIN_UI_TAGS}" >> $GITHUB_OUTPUT
         
@@ -160,9 +163,9 @@ jobs:
 
   release:
     runs-on: ubuntu-latest
-    needs: [build, docker-build, package-extension]
+    needs: [build, docker-build, package-extension, prepare-release]
     # Only create releases on pushes to main branch, not on PRs
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && success()
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && success() && needs.prepare-release.result == 'success'
     permissions:
       contents: write
       packages: read
@@ -181,8 +184,14 @@ jobs:
     - name: Set release tag
       id: tag
       run: |
-        echo "tag=${{ needs.prepare-release.outputs.release_tag }}" >> $GITHUB_OUTPUT
-        echo "Using release tag: ${{ needs.prepare-release.outputs.release_tag }}"
+        RELEASE_TAG="${{ needs.prepare-release.outputs.release_tag }}"
+        if [ -z "${RELEASE_TAG}" ]; then
+          echo "Error: Release tag from prepare-release job is empty"
+          echo "prepare-release result: ${{ needs.prepare-release.result }}"
+          exit 1
+        fi
+        echo "tag=${RELEASE_TAG}" >> $GITHUB_OUTPUT
+        echo "Using release tag: ${RELEASE_TAG}"
 
     - name: Get repository name (lowercase for Docker)
       id: repo
