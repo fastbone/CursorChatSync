@@ -3,6 +3,7 @@
   "displayName": "Cursor Chat Sync",
   "description": "Sync chat history across workstations with team collaboration",
   "version": "1.0.0",
+  "publisher": "fastbone",
   "repository": {
     "type": "git",
     "url": "https://github.com/fastbone/CursorChatSync.git"

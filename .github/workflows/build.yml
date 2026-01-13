@@ -86,14 +86,24 @@ jobs:
       run: |
         # Convert repository name to lowercase (required for Docker registry)
         REPO_LOWER=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
-        echo "backend_image=ghcr.io/${REPO_LOWER}/backend" >> $GITHUB_OUTPUT
-        echo "admin_ui_image=ghcr.io/${REPO_LOWER}/admin-ui" >> $GITHUB_OUTPUT
-        # Tag with latest, release tag (if available), and commit SHA
+        echo "repo_lower=${REPO_LOWER}" >> $GITHUB_OUTPUT
+        
+        # Build tags for backend (comma-separated for docker/build-push-action)
+        BACKEND_TAGS="ghcr.io/${REPO_LOWER}/backend:latest,ghcr.io/${REPO_LOWER}/backend:${{ github.sha }}"
         if [ "${{ github.ref }}" == "refs/heads/main" ] && [ "${{ github.event_name }}" == "push" ] && [ -n "${{ needs.prepare-release.outputs.release_tag }}" ]; then
-          echo "tags=latest,${{ needs.prepare-release.outputs.release_tag }},${{ github.sha }}" >> $GITHUB_OUTPUT
-        else
-          echo "tags=latest,${{ github.sha }}" >> $GITHUB_OUTPUT
+          BACKEND_TAGS="${BACKEND_TAGS},ghcr.io/${REPO_LOWER}/backend:${{ needs.prepare-release.outputs.release_tag }}"
         fi
+        echo "backend_tags=${BACKEND_TAGS}" >> $GITHUB_OUTPUT
+        
+        # Build tags for admin-ui
+        ADMIN_UI_TAGS="ghcr.io/${REPO_LOWER}/admin-ui:latest,ghcr.io/${REPO_LOWER}/admin-ui:${{ github.sha }}"
+        if [ "${{ github.ref }}" == "refs/heads/main" ] && [ "${{ github.event_name }}" == "push" ] && [ -n "${{ needs.prepare-release.outputs.release_tag }}" ]; then
+          ADMIN_UI_TAGS="${ADMIN_UI_TAGS},ghcr.io/${REPO_LOWER}/admin-ui:${{ needs.prepare-release.outputs.release_tag }}"
+        fi
+        echo "admin_ui_tags=${ADMIN_UI_TAGS}" >> $GITHUB_OUTPUT
+        
+        echo "Backend tags: ${BACKEND_TAGS}"
+        echo "Admin UI tags: ${ADMIN_UI_TAGS}"
 
     - name: Build and push backend image
       uses: docker/build-push-action@v5
@@ -101,7 +111,7 @@ jobs:
         context: ./backend
         file: ./backend/Dockerfile
         push: true
-        tags: ${{ steps.meta.outputs.backend_image }}:${{ steps.meta.outputs.tags }}
+        tags: ${{ steps.meta.outputs.backend_tags }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
 
@@ -111,14 +121,9 @@ jobs:
         context: ./admin-ui
         file: ./admin-ui/Dockerfile
         push: true
-        tags: ${{ steps.meta.outputs.admin_ui_image }}:${{ steps.meta.outputs.tags }}
+        tags: ${{ steps.meta.outputs.admin_ui_tags }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
-
-    - name: Output image names
-      run: |
-        echo "Backend image: ${{ steps.meta.outputs.backend_image }}"
-        echo "Admin UI image: ${{ steps.meta.outputs.admin_ui_image }}"
 
   package-extension:
     runs-on: ubuntu-latest
